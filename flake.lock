@@ -1,5 +1,22 @@
 {
   "nodes": {
+    "linux": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1791729275,
+        "narHash": "sha256-PiEzLg8a6tiqUgnNV5GEg2uBhKVxa7Vp7/7NLg9JfAw=",
+        "owner": "itsvic-dev",
+        "repo": "linux-mt6739-agm-m7",
+        "rev": "556eb84b9b8a2cb0f67a2c7f509468d25f327be2",
+        "type": "github"
+      },
+      "original": {
+        "owner": "itsvic-dev",
+        "ref": "agm-m7",
+        "repo": "linux-mt6739-agm-m7",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1791549541,
@@ -18,6 +35,7 @@
     },
     "root": {
       "inputs": {
+        "linux": "linux",
         "nixpkgs": "nixpkgs"
       }
     }
