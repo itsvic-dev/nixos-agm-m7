@@ -37,7 +37,7 @@ Nothing. Pick from the follow-ups.
 - Drop the `userdata` encryption once updating and reflashing from NixOS is reliable. Reformatting `userdata` deletes the LineageOS data, so ask first.
 - Remove `regulator_ignore_unused` from the cmdline. First find which regulators must stay on.
 - RTC: Linux reads the date as 2069-12-31. Check the year mapping against the stock driver (base year 1968).
-- Offline charging (LK charging mode after a power off with USB connected) does not work. A long press gets out of it.
+- Offline charging: LK boots the `boot` partition (LineageOS) with the charger mode. There, Android init finds no `/system` binaries (no healthd, no charger UI), so the screen keeps LK's picture. The battery still charges. A long press gets out of it. Fix it when NixOS replaces `boot`: handle `androidboot.mode=charger` in NixOS.
 - auxadc: `batt_v` reads garbage and some channels time out.
 - Charger: BC1.2 charger type detection for higher currents on wall chargers.
 - Remove `clk_ignore_unused` from the cmdline.
