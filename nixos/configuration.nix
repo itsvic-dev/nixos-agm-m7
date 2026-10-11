@@ -58,6 +58,8 @@
 
   environment.systemPackages = with pkgs; [
     evtest
+    fastfetch
+    (runCommand "devmem" { } "mkdir -p $out/bin; ln -s ${busybox}/bin/busybox $out/bin/devmem")
   ];
 
   system.stateVersion = "26.05";
