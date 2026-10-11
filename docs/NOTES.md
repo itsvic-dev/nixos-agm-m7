@@ -70,6 +70,8 @@ PSCI `SYSTEM_RESET` and `SYSTEM_OFF` both hang in the ATF. The watchdog is stopp
 - The pwrap reset is infracfg `0x140` bit 0.
 - Long-press reset: the mainline keys driver turns it off unless the DT sets it. We keep the stock setting: one key, `power-off-time-sec = <0>`.
 - The mainline auxadc scale did not divide by the ADC resolution. Fixed. `bat_adc` gives the battery voltage (`adc-battery`, matches the stock kernel within about 60 mV while charging). `batt_v` reads garbage, and some channels time out.
+- Battery percent: `ocv-capacity-table-0` comes from the stock `battery0_profile_t1` (25 °C) in `bat_gm30`. Each profile entry is (depth, OCV in 0.1 mV, resistance).
+- Charger detection: `RGS_CHRDET` is `CHR_TOP_CON0` (0xa88) bit 4. The `CHRDET` interrupt fires on plug and unplug. Do not use the label `charger`: the LK overlay sink has it.
 - The stock kernel also reads a wrong date from the RTC. Android keeps the time in software.
 
 ## Keypad
@@ -112,7 +114,8 @@ LK turns on the panel and the path OVL0 -> RDMA0 -> DBI0 (mutex 0). The panel ha
 | Keypad, power key | works (`mt6779-keypad`, `mtk-pmic-keys`) |
 | PMIC (pwrap, MT6357 regulators, RTC, auxadc) | works, `regulator_ignore_unused` on cmdline |
 | Power off | works (PMIC `RG_PWRHOLD`) |
-| Battery voltage | works (`adc-battery`) |
-| Charger, fuel gauge | not done |
+| Battery voltage, percent | works (`adc-battery` with the stock OCV table) |
+| Charger detection | works (`mt6357-charger`, `CHR_TOP_CON0` bit 4) |
+| Charging control, fuel gauge | not done |
 | Userspace | NixOS 26.05 from `/data/nixos.img` |
 | SD card, Wi-Fi, BT, modem, audio, camera, GPU | not done |

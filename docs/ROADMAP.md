@@ -16,10 +16,13 @@ Findings are in `NOTES.md`. This file tracks what is done and what is next.
 - Power off through the PMIC.
 - NixOS 26.05 userspace from a flake in this repo.
 - Display: DRM driver for the DBI path that LK sets up, with fbcon.
+- Battery percent from the stock OCV table, charger detection.
 
 ## Now
 
-Nothing. Pick from the follow-ups.
+1. Build the kernel and `boot.img` in the flake.
+2. Weston.
+3. Touchscreen.
 
 ## Follow-ups
 
@@ -27,7 +30,7 @@ Nothing. Pick from the follow-ups.
 - RTC: Linux reads the date as 2069-12-31. Check the year mapping against the stock driver (base year 1968).
 - Long-press reset does not work on mainline (a hung power off needed a battery pull). Check the PMIC key settings.
 - auxadc: `batt_v` reads garbage and some channels time out.
-- Battery: charger and fuel gauge. Mainline has no MT6357 driver for them.
+- Battery: charging control and a fuel gauge (coulomb counter). Mainline has no MT6357 driver for them.
 - Remove `clk_ignore_unused` from the cmdline.
 - USB DMA (MUSB runs in PIO mode).
 - NixOS: build the kernel and `boot.img` in the flake. Maybe use Mobile NixOS parts. Not for upstream.
