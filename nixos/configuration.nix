@@ -15,6 +15,7 @@
     ./vendor.nix
     ./wifi.nix
     ./firefox.nix
+    ./gpu.nix
   ];
 
   boot.loader.grub.enable = false;
