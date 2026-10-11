@@ -77,7 +77,7 @@ PSCI `SYSTEM_RESET` and `SYSTEM_OFF` both hang in the ATF. The watchdog is stopp
 - The mainline auxadc scale did not divide by the ADC resolution. Fixed. `bat_adc` gives the battery voltage (`adc-battery`, matches the stock kernel within about 60 mV while charging). `batt_v` reads garbage, and some channels time out.
 - Battery percent: `ocv-capacity-table-0` comes from the stock `battery0_profile_t1` (25 °C) in `bat_gm30`. Each profile entry is (depth, OCV in 0.1 mV, resistance).
 - Charger detection: `RGS_CHRDET` is `CHR_TOP_CON0` (0xa88) bit 4. The `CHRDET` interrupt fires on plug and unplug. Do not use the label `charger`: the LK overlay sink has it.
-- Charging: LK leaves the charger watchdog on (about 32 s) with nobody to kick it, so under Linux without a driver the charger stops (`CHR_EN` = 0, `CHRWDT_OUT` = 1) and the battery drains about 100 mA even on USB. `mt6357-charger` kicks `CHRWDT_WR` (`CHR_CON9` bit 7) every 10 s. Register fields and encodings are in the vendor `mt6357_hw.h` and `mt6357_charger.c`.
+- Charging: an external HL7005 (bq24157 family) at I2C1 0x6a charges the battery. LineageOS binds driver `hl7005` to `1-006a` and leaves the MT6357 charger off (`CHR_EN` = 0, `CHRWDT_OUT` = 1). Programming the MT6357 charger did nothing useful: the charge current we saw came from the HL7005, still set up by LineageOS. LineageOS has `/sys/devices/platform/mt-pmic/pmic_access` to read PMIC registers (write the address, then read).
 - Gauge current: `FGADC_CUR_CON0` (0xd8a), latched with `FGADC_CON1` (`SW_READ_PRE`, wait for bit 15, read, `SW_CLEAR`). s16, 305.176 uA per LSB with 10 mOhm, times `CAR_TUNE` 0.93. Positive is charging.
 - Battery NTC: 10 kOhm with 16.9 kOhm pull-up to 1.8 V (vendor default), on auxadc `batt_temp`. Our value matched LineageOS within 0.5 C.
 - auxadc fixes for MT6357: `ISENSE` and `VCDT` used request bit 0 (should be 1 and 2), and `ISENSE` is 15 bits, not 12.
@@ -124,7 +124,7 @@ LK turns on the panel and the path OVL0 -> RDMA0 -> DBI0 (mutex 0). The panel ha
 | PMIC (pwrap, MT6357 regulators, RTC, auxadc) | works, `regulator_ignore_unused` on cmdline |
 | Power off | works (PMIC `RG_PWRHOLD`) |
 | Battery voltage, percent | works (`adc-battery` with the stock OCV table) |
-| Charger | works (`mt6357-charger`: CC/CV, watchdog, temperature limits) |
-| Fuel gauge | current only, no coulomb counting |
+| Charger detection, fuel gauge | works (`mt6357-charger`) |
+| Charging | not done (external HL7005 on I2C1) |
 | Userspace | NixOS 26.05 from `/data/nixos.img` |
 | SD card, Wi-Fi, BT, modem, audio, camera, GPU | not done |

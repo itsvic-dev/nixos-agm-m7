@@ -16,11 +16,12 @@ Findings are in `NOTES.md`. This file tracks what is done and what is next.
 - Power off through the PMIC.
 - NixOS 26.05 userspace from a flake in this repo.
 - Display: DRM driver for the DBI path that LK sets up, with fbcon.
-- Battery percent from the stock OCV table, charger detection, charge control.
+- Battery: fuel gauge (current, coulomb counting, temperature), charger detection.
+- Fast test loop: flash `recovery` from NixOS and `reboot recovery` through the RTC boot flag.
 
 ## Now
 
-1. Fuel gauge: coulomb counter, and a battery driver that owns current, temperature and status.
+1. I2C (the controller does not work yet), then the HL7005 charger on I2C1 and the TLSC6x touchscreen on I2C0.
 2. Build the kernel and `boot.img` in the flake.
 3. Weston.
 4. Touchscreen.
@@ -31,7 +32,7 @@ Findings are in `NOTES.md`. This file tracks what is done and what is next.
 - RTC: Linux reads the date as 2069-12-31. Check the year mapping against the stock driver (base year 1968).
 - Long-press reset does not work on mainline (a hung power off needed a battery pull). Check the PMIC key settings.
 - auxadc: `batt_v` reads garbage and some channels time out.
-- Charger: raise CV to 4.35 V (stock value) after more testing. BC1.2 charger type detection for higher currents on wall chargers.
+- Charger: BC1.2 charger type detection for higher currents on wall chargers.
 - Remove `clk_ignore_unused` from the cmdline.
 - USB DMA (MUSB runs in PIO mode).
 - NixOS: build the kernel and `boot.img` in the flake. Maybe use Mobile NixOS parts. Not for upstream.

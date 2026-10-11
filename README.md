@@ -19,8 +19,8 @@ Mainline Linux and NixOS on the AGM M7, a rugged keypad phone with a MediaTek MT
 | PMIC (MT6357): regulators, RTC, auxadc | Partial | `regulator_ignore_unused` on the cmdline. RTC reads a wrong year |
 | Keypad, power key | Y | All 22 keys. Long-press reset does not work |
 | Display | Partial | DRM and fbcon work. The driver reuses the panel setup from the bootloader. No backlight control |
-| Battery | Partial | Voltage, temperature, gauge current, and a percent estimate from the stock 25 °C OCV table. No coulomb counting yet, so the percent reads high while charging |
-| Charger | Partial | `mt6357-charger`: CC/CV at 4.20 V and 450 mA, end of charge and recharge in software, 0 to 45 °C limit, hardware watchdog. No USB charger type detection (BC1.2), so always 450 mA |
+| Battery | Partial | `mt6357-charger` fuel gauge: voltage, current, temperature, coulomb counting from an OCV start value. Status comes from the gauge current |
+| Charger | Partial | USB detection works. The charger is an external HL7005 on I2C1 (not the MT6357 one), and it has no driver yet, so the battery does not charge under Linux. Charge in LineageOS or when powered off |
 | Touchscreen | N | |
 | SD card | N | |
 | Wi-Fi, Bluetooth, GPS, FM | N | MT6739 connectivity (CONSYS) |
