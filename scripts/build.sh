@@ -20,6 +20,6 @@ python3 "$here/scripts/mkboot.py" \
 	--kernel "$out/arch/arm64/boot/Image.gz" \
 	--dtb "$out/arch/arm64/boot/dts/mediatek/mt6739-agm-m7.dtb" \
 	--ramdisk "$out/initramfs.cpio.gz" \
-	--cmdline "earlycon=pstoreram,0x4445f000 keep_bootcon mtk_wdt_early=0x10007000,30 clk_ignore_unused loglevel=8 rdinit=/init" \
+	--cmdline "earlycon=pstoreram,0x4445f000 keep_bootcon mtk_wdt_early=0x10007000,30 clk_ignore_unused regulator_ignore_unused loglevel=8 rdinit=/init" \
 	-o "$out/boot.img"
 ls -l "$out/boot.img"
