@@ -11,7 +11,7 @@
     "${modulesPath}/profiles/minimal.nix"
     ./rootfs.nix
     ./initrd.nix
-    ./labwc.nix
+    ./sway.nix
   ];
 
   boot.loader.grub.enable = false;
