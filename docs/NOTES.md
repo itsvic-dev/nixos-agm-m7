@@ -50,7 +50,7 @@ PSCI `SYSTEM_RESET` and `SYSTEM_OFF` both hang in the ATF. The watchdog is stopp
 
 - Built with pmbootstrap in the VM: device `qemu-aarch64`, kernel `lts`, `service_manager = openrc`, UI `console`. The root image goes to `/data/pmos.img` (2 GiB ext4).
 - The initramfs mounts it with `losetup` and `mount -t ext4` (busybox `mount -o loop` fails), moves `/data` to `/mnt/data`, and runs `switch_root`.
-- `/data/pmos.disable`, or `touch /tmp/nopmos` within 10 s of boot, keeps the busybox shell.
+- The initramfs boots `/data/nixos.img` first, then `/data/pmos.img`. `/data/<name>.disable`, or `touch /tmp/noboot` within 10 s, skips an image.
 - `ssh user@172.16.42.1`.
 - Do not upstream: pmOS (Nura) and Mobile NixOS do not accept AI-written code.
 
