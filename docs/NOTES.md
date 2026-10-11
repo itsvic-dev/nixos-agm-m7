@@ -27,6 +27,11 @@ LK loads at 0x46000000. Facts found by disassembly:
 
 `fastboot flash recovery out/boot.img` also works.
 
+Faster, from a running NixOS: `scripts/nixos-flash.sh` copies `out/boot.img` over SSH, writes it to `recovery` (`mmcblk0p2`), and runs `systemctl reboot --reboot-argument=recovery`. About 50 s per round trip.
+
+- `reboot recovery`: the RTC driver sets `RTC_PDN1` bit 4 and triggers `WRTGR`, as the vendor kernel does. LK boots `recovery` once and clears the bit. `reboot bootloader` sets bit 13 (fastboot).
+- The USB gadget needs fixed MAC addresses (`g_cdc.dev_addr`, `g_cdc.host_addr`). With random ones, macOS often does not create the network interface after a reboot.
+
 ## Debug without UART
 
 - `earlycon=pstoreram,0x4445f000` writes the kernel log into the stock pstore console zone. LineageOS shows it as `/sys/fs/pstore/console-ramoops`. RAM survives normal resets and long-press resets. A battery pull clears it.
