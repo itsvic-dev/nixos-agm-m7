@@ -39,5 +39,8 @@
 
   hardware.graphics.enable = true;
 
-  environment.systemPackages = [ pkgs.vulkan-tools ];
+  environment.systemPackages = [
+    pkgs.vulkan-tools
+    (pkgs.callPackage ../tools/vk-compute/package.nix { })
+  ];
 }
