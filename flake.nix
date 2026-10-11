@@ -23,6 +23,7 @@
       nixosConfigurations.agm-m7 = agm-m7;
       packages.aarch64-linux = {
         inherit kernel;
+        boot-parts = pkgs.callPackage ./nixos/boot-parts.nix { inherit kernel; };
         rootfs = agm-m7.config.system.build.rootfs;
       };
     };
