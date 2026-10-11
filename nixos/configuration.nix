@@ -37,6 +37,7 @@
       EmitDNS = false;
     };
   };
+  networking.nftables.enable = true;
   networking.firewall.allowedUDPPorts = [ 67 ];
 
   services.getty.autologinUser = "root";
