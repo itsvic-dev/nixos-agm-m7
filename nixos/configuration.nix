@@ -46,6 +46,8 @@
     wantedBy = [ "getty.target" ];
   };
 
+  services.seatd.enable = true;
+
   services.openssh.enable = true;
   users.users.root.openssh.authorizedKeys.keys = [
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPQ9kubQPsQKJdtOLG35DApD9IWNU5gR6Dm+e2cy2L83"
@@ -59,6 +61,7 @@
   environment.systemPackages = with pkgs; [
     evtest
     fastfetch
+    weston
     (runCommand "devmem" { } "mkdir -p $out/bin; ln -s ${busybox}/bin/busybox $out/bin/devmem")
   ];
 
