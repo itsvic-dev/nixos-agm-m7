@@ -74,6 +74,23 @@ github.com/LgPWNd/Alcatel_mt6739_5059R_and_5041C_universal_kernel-4.4.95-,
 - Job ioctls (VM and job contexts, free lists, HWRT datasets, submit) return `-EOPNOTSUPP`.
 - Debugfs `dri/13000000.gpu/ddk19/`: `state` (power state, CCB offsets, assert, trace) and `sync` (write to send a `SYNC`). Decode the trace with `tools/fwtrace-decode.py rgx_fwif_sf.h < state`.
 
+## Stage 3b (done)
+
+- The first 24 bytes of the mainline FW memory context match `RGXFWIF_FWMEMCONTEXT`, so the mainline VM code works unchanged. The MMU definitions of both are the same.
+- `tools/pvr-vmtest.c`: VM context, BO, map, unmap. Map and unmap send `MMUCACHE` through the firmware.
+
+## Stage 3c (compute, kernel side done)
+
+- Client CCB: 56-byte headers, 1.9 command types (task bit 31, no magic). Size estimates use the larger header.
+- `KICK` carries the context's DM (CDM = 4). With DM 0 the firmware queues the work on GP and nothing runs.
+- Compute context: 160-byte `RGXFWIF_FWCOMMONCONTEXT`, then the mainline static compute state for our own use. The context state object holds the 8-byte `COMPUTECTX_STATE` and a 16-byte RF command. The firmware dereferences the RF command pointer once BRN 65273 is set up, so it must not be 0.
+- BRN 65273: before the first compute kick after power-up, `rgxfw_framework_kick_cdm` loads the context PC into all 8 BIF catalogue bases and runs dummy tiling passes into `0xF800000000` (INIA) and `0xF900000000` (INIB). Every VM context maps 64 KiB there. The vendor userspace does the same ("BRN65273_RgnHeader").
+- MFG1 (dusts): HW APM switches it through the SPM firmware, which mainline does not load. MFG1 is a normal genpd domain under the GPU, off by default; HW APM is off (`powervr.hw_apm`).
+- `tools/pvr-computetest.c`: a compute job whose control stream is only `STREAM_TERMINATE` (0x80000000). Runs without HWR.
+- Not done: `PDS_CTRL`, `TPU`, `TPU_ARRAYS_CDM`, `COMPUTE_THREAD_BARRIER` and the YUV coefficients are 0 in the compute command. Mesa does not send them. Read the vendor values on LineageOS before running real shaders.
+- Heaps: with BRN 65273 the PDS, USC and VisTest heaps must sit in one 1 GiB PC entry each (1.9: PDS 0xA800000000, USC 0xBA00000000). The kernel still reports the mainline heaps.
+- Debugging: `ddk19/state` lists HWR entries (type, DM, BIF/MMU status, PC address); `ddk19/nmi` takes an NMI and prints the MIPS EPC, cause and bad address. Disassemble with `mipsel-linux-gnu-objdump -d -l -M micromips`; the firmware has symbols and line info.
+
 ## Plan
 
 1. Platform: MFG power domains, clocks and DT node. Read the core ID register. Done.
