@@ -7,12 +7,16 @@ logs=$here/logs/$name
 mkdir -p "$logs"
 
 wait_adb() {
-	until [ "$(adb get-state 2>/dev/null)" = device ]; do sleep 2; done
+	until [ "$(adb get-state 2>/dev/null)" = device ] &&
+		[ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ]; do
+		sleep 2
+	done
 }
 
 wait_adb
 adb push "$here/out/boot.img" /data/local/tmp/agm-boot.img >/dev/null
-adb shell "phh-su -c 'dd if=/data/local/tmp/agm-boot.img of=/dev/block/platform/bootdevice/by-name/recovery bs=1M conv=fsync 2>&1 | tail -1'"
+adb shell "phh-su -c 'dd if=/data/local/tmp/agm-boot.img of=/dev/block/platform/bootdevice/by-name/recovery bs=1M conv=fsync' && echo flashed" | grep -q flashed ||
+	{ echo "flashing recovery failed"; exit 1; }
 
 ls /dev/cu.usbmodem* 2>/dev/null > "$logs/usb-before.txt" || true
 adb reboot recovery
