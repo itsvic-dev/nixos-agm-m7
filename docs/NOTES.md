@@ -1,0 +1,70 @@
+# AGM M7 notes
+
+## Hardware
+
+- SoC: MediaTek MT6739 (4x Cortex-A53, GICv3, PowerVR GE8100).
+- RAM: 1 GiB at 0x40000000. eMMC: 7.28 GiB (FN62BB).
+- PMIC: MT6357.
+- Panel: GalaxyCore GC9306 (`gc9306_dbi_c_qvgal`), 240x320, DBI command mode.
+- Stock firmware: Android 8.1, 32-bit kernel 4.4.95 (`bootopt=64S3,32S1,32S1`).
+
+## Bootloader (LK)
+
+LK loads at 0x46000000. Facts found by disassembly:
+
+- `boot.img` is header v0. The kernel blob is `Image.gz` (or `zImage`) with the DTB appended.
+- `bootopt=64S3,32N2,64N2` in the header cmdline selects a 64-bit kernel. The kernel address must be 512 KiB aligned.
+- LK loads the DTB from the `boot` or `recovery` partition early, before fastboot. So `fastboot boot` runs our kernel with the DTB of the `boot` partition. Do not use it.
+- LK applies the ODM overlay from `odmdtbo` to our DTB, and asserts (silent hang before the logo) if that fails. Our DTB is built with `-@` and has the node `lk-odm-overlay-sink` with all 41 labels that the overlay needs. Do not reuse those labels (for example `pio`) on real nodes.
+- `fastboot getvar` hangs LK. `fastboot reboot recovery` boots normally.
+- LK passes the framebuffer in `/chosen` as `atag,videolfb-*`.
+
+## Test loop
+
+1. Boot LineageOS (GSI). Root is `phh-su -c`.
+2. `scripts/build.sh` in the `agm-m7` OrbStack VM.
+3. `scripts/test-recovery.sh <name>` writes `out/boot.img` to `recovery`, runs `adb reboot recovery`, waits for LineageOS, and copies pstore to `logs/<name>/`.
+
+`fastboot flash recovery out/boot.img` also works.
+
+## Debug without UART
+
+- `earlycon=pstoreram,0x4445f000` writes the kernel log into the stock pstore console zone. LineageOS shows it as `/sys/fs/pstore/console-ramoops`. RAM survives normal resets and long-press resets. A battery pull clears it.
+- `mtk_wdt_early=0x10007000,30` arms the watchdog early. A hung kernel resets after 30 s.
+- USB: `g_cdc` gives a serial shell (`/dev/cu.usbmodem*`) and ECM networking. The phone is 172.16.42.1. Set the Mac to 172.16.42.2/24. `scripts/tnet.sh` runs commands over telnet.
+- The initramfs reboots after 300 s unless `/tmp/stay` exists.
+
+## Restart
+
+PSCI `SYSTEM_RESET` hangs in the ATF. The `mtk_wdt` restart handler must run first (`mediatek,lk-normal-restart`, priority 192). It sets `AUTO_START` (the bootloaders read it as "boot without power key") and clears `DDR_RESERVE` (else the bootloaders stall on the orange-state screen).
+
+## userdata
+
+`userdata` (`mmcblk0p33`) has full-disk encryption: dm-crypt `aes-cbc-essiv:sha256` with a 128-bit key, f2fs inside.
+
+- `tools/dmtable.c` (static armhf, run as root on LineageOS) prints the dm table with the key. Keep it in `secrets/userdata-dm-table.txt`. Never commit it.
+- `scripts/build.sh` puts the table into the initramfs. `dmctl create userdata rw "$(cat /etc/userdata.table)"` creates `/dev/dm-0`.
+- Android runs `fsck.f2fs` on the raw encrypted partition at every boot, and it always fails with "Magic Mismatch". That is normal.
+
+## postmarketOS
+
+- Built with pmbootstrap in the VM: device `qemu-aarch64`, kernel `lts`, `service_manager = openrc`, UI `console`. The root image goes to `/data/pmos.img` (2 GiB ext4).
+- The initramfs mounts it with `losetup` and `mount -t ext4` (busybox `mount -o loop` fails), moves `/data` to `/mnt/data`, and runs `switch_root`.
+- `/data/pmos.disable`, or `touch /tmp/nopmos` within 10 s of boot, keeps the busybox shell.
+- `ssh user@172.16.42.1`.
+- Do not upstream: pmOS (Nura) and Mobile NixOS do not accept AI-written code.
+
+## Hardware status
+
+| Part | Status |
+|---|---|
+| CPUs, GIC, timer, PSCI | works |
+| Clocks (apmixedsys, topckgen, infracfg) | works, `clk_ignore_unused` on cmdline |
+| Pinctrl, GPIO, EINT | works |
+| eMMC | works, 52 MHz, fixed `vemc` regulator |
+| USB device | works, PIO only |
+| Watchdog, restart | works |
+| Display | not done (needs a DBI trigger driver) |
+| Keypad, power key | not done |
+| PMIC, battery | not done |
+| SD card, Wi-Fi, BT, modem, audio, camera, GPU | not done |
