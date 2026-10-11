@@ -73,10 +73,11 @@ PSCI `SYSTEM_RESET` and `SYSTEM_OFF` both hang in the ATF. The watchdog is stopp
 - The pwrap registers are the same as on MT6765, but the preloader also enables the INT1 interrupt group. The mainline MT6765 entry ignores INT1, and the pwrap interrupt then storms until the watchdog fires. The MT6739 entry turns INT1 off.
 - The PMIC interrupt is EINT 182 (virtual pin 168), level high.
 - The pwrap reset is infracfg `0x140` bit 0.
-- Long-press reset: the mainline keys driver turns it off unless the DT sets it. We keep the stock setting: one key, `power-off-time-sec = <0>`.
+- Long-press reset: the mainline keys driver turns it off unless the DT sets it. We keep the stock setting: one key, `power-off-time-sec = <0>`. MT6357 has the MT6331 layout of `TOP_RST_MISC` (0x14c): time bits 13:12, power-key reset enable bit 9, home-key bit 8. Stock value 0x221.
+- Power key: press and release have separate interrupts (`PWRKEY`, `PWRKEY_R`). `TOPSTATUS` (0x24) bit 1 is 1 when released.
 - The mainline auxadc scale did not divide by the ADC resolution. Fixed. `bat_adc` gives the battery voltage (`adc-battery`, matches the stock kernel within about 60 mV while charging). `batt_v` reads garbage, and some channels time out.
 - Battery percent: `ocv-capacity-table-0` comes from the stock `battery0_profile_t1` (25 °C) in `bat_gm30`. Each profile entry is (depth, OCV in 0.1 mV, resistance).
-- Charger detection: `RGS_CHRDET` is `CHR_TOP_CON0` (0xa88) bit 4. The `CHRDET` interrupt fires on plug and unplug. Do not use the label `charger`: the LK overlay sink has it.
+- Charger detection: `RGS_CHRDET` is `CHR_TOP_CON0` (0xa88) bit 4. Use the `CHRDET_EDGE` interrupt, as stock does. `CHRDET` is a level interrupt and fires all the time while a charger is connected. Do not use the label `charger`: the LK overlay sink has it.
 - Charging: an external HL7005 (bq24157 family) at I2C1 0x6a charges the battery. LineageOS binds driver `hl7005` to `1-006a` and leaves the MT6357 charger off (`CHR_EN` = 0, `CHRWDT_OUT` = 1). Programming the MT6357 charger did nothing useful: the charge current we saw came from the HL7005, still set up by LineageOS. LineageOS has `/sys/devices/platform/mt-pmic/pmic_access` to read PMIC registers (write the address, then read).
 - Gauge current: `FGADC_CUR_CON0` (0xd8a), latched with `FGADC_CON1` (`SW_READ_PRE`, wait for bit 15, read, `SW_CLEAR`). s16, 305.176 uA per LSB with 10 mOhm, times `CAR_TUNE` 0.93. Positive is charging.
 - Battery NTC: 10 kOhm with 16.9 kOhm pull-up to 1.8 V (vendor default), on auxadc `batt_temp`. Our value matched LineageOS within 0.5 C.

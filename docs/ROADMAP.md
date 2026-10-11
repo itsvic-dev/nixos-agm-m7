@@ -37,9 +37,6 @@ Nothing. Pick from the follow-ups.
 - Drop the `userdata` encryption once updating and reflashing from NixOS is reliable. Reformatting `userdata` deletes the LineageOS data, so ask first.
 - Remove `regulator_ignore_unused` from the cmdline. First find which regulators must stay on.
 - RTC: Linux reads the date as 2069-12-31. Check the year mapping against the stock driver (base year 1968).
-- Long-press reset: mainline `mtk-pmic-keys` uses the MT6397 layout of `TOP_RST_MISC` for the MT6357 and clears its power-key reset enable (bit 9). MT6357 (vendor `mt6357_hw.h`, stock value 0x221): home-key enable bit 8, power-key enable bit 9, timer disable bit 10, time bits 13:12. Fix the MT6357 map in the driver (upstreamable). Until then every hang needs a battery pull.
-- Power key: `TOPSTATUS` bit 1 (power-key debounce) reads 0 ("pressed") all the time, so `mtk-pmic-keys` (MT6357 has no release interrupt there) reports one press and then only duplicates. At the same time the MT6357 charger-detect interrupt storms at about 75/s (seen with the HL7005 driver loaded). Check whether the two are linked.
-- Power off hangs since PM, runtime PM, HL7005 and CONSYS were added (it worked before). Test `poweroff -f` against `systemctl poweroff` once the long-press reset works.
 - auxadc: `batt_v` reads garbage and some channels time out.
 - Charger: BC1.2 charger type detection for higher currents on wall chargers.
 - Remove `clk_ignore_unused` from the cmdline.

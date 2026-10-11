@@ -17,7 +17,7 @@ Mainline Linux and NixOS on the AGM M7, a rugged keypad phone with a MediaTek MT
 | Watchdog, restart | Y | Through `mtk_wdt`. PSCI reset and power off hang in the ATF |
 | Power off | Y | Through the PMIC. With USB connected, the phone starts offline charging |
 | PMIC (MT6357): regulators, RTC, auxadc | Partial | `regulator_ignore_unused` on the cmdline. RTC reads a wrong year |
-| Keypad, power key | Y | All 22 keys. Long-press reset does not work |
+| Keypad, power key | Y | All 22 keys. Hold the hang-up key for a reset |
 | Display | Partial | DRM and fbcon work. The driver reuses the panel setup from the bootloader. No backlight control |
 | Battery | Partial | `mt6357-charger` fuel gauge: voltage, current, temperature, coulomb counting from an OCV start value. Status comes from the gauge current |
 | Charger | Partial | External HL7005 on I2C1 (`hl7005`): 4.20 V, input limit 500 mA, watchdog, 0 to 45 °C limit. No USB charger type detection, so always 500 mA input |
