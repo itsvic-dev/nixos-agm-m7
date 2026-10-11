@@ -8,7 +8,7 @@ Status: research only, nothing ported yet (2026-10-11).
 - LineageOS loads `wmt_drv.ko` (WMT "conn_soc" stack), `wmt_chrdev_wifi.ko`, `wlan_drv_gen2.ko`, `bt_drv.ko`, `gps_drv.ko` and `fmradio_drv.ko` from `/vendor/lib/modules`. `ro.wlan.gen=gen2`, `mediatek.wlan.chip=CONSYS_MT6739`, chip ID 0x6739.
 - Userspace: `wmt_loader` and `wmt_launcher` power the block on through `/dev/wmtdetect` and `/dev/stpwmt`.
 - Firmware: `ROMv2_lm_patch_1_0_hdr.bin`, `ROMv2_lm_patch_1_1_hdr.bin`, `WIFI_RAM_CODE_6755` (the MT6755 name is used on MT6739), `WMT_SOC.cfg` (`co_clock_flag=1`, `coex_wmt_ant_mode=1`), `wifi_fw.cfg`.
-- Copies of the firmware, the modules and the stock kernel log are in `logs/wifi/` (not in git).
+- Copies of the firmware, the modules and the stock kernel log are in `logs/reference/wifi/` (not in git).
 
 ## Hardware resources (stock DT)
 
