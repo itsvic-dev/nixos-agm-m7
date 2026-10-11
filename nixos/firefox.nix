@@ -19,7 +19,14 @@ let
     #nav-bar, #urlbar-container, #urlbar, #search-container, toolbar, toolbaritem, toolbarbutton {
       min-width: 0 !important;
     }
-    #urlbar-container { flex: 1 1 0 !important; }
+    #urlbar-container { flex: 1 1 0 !important; margin-inline: 2px !important; }
+    #forward-button, #home-button, #downloads-button, #fxa-toolbar-menu-button,
+    #unified-extensions-button, #library-button, #sidebar-button, #firefox-view-button,
+    #alltabs-button, #save-to-pocket-button, #nav-bar toolbarspring,
+    #tracking-protection-icon-container, #identity-permission-box, #page-action-buttons,
+    #star-button-box, #reader-mode-button, #translations-button {
+      display: none !important;
+    }
     #main-window, #browser, #tabbrowser-tabbox, browser { min-width: 0 !important; min-height: 0 !important; }
   '';
 

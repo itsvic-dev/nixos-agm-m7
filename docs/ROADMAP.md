@@ -44,6 +44,7 @@ Nothing. Pick from the follow-ups.
 - Charger: BC1.2 charger type detection for higher currents on wall chargers.
 - Remove `clk_ignore_unused` from the cmdline.
 - USB DMA (MUSB runs in PIO mode).
+- eMMC HS400: find the strobe delay register in the MSDC0 pad macro (0x11cd0000) and give `mtk-sd` an MT6739 entry for it. A failed HS400 tuning leaves the eMMC unusable, so test with care. HS200 already gives most of the speed.
 - NixOS: build the kernel and `boot.img` in the flake. Maybe use Mobile NixOS parts. Not for upstream.
 - NixOS: clean shutdown of the loop-mounted root.
 - `MEMCG` crashes in `__refill_obj_stock` when systemd loads BPF.
