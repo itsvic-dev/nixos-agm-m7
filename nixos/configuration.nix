@@ -61,6 +61,8 @@
   environment.systemPackages = with pkgs; [
     evtest
     fastfetch
+    i2c-tools
+    libgpiod
     weston
     (runCommand "devmem" { } "mkdir -p $out/bin; ln -s ${busybox}/bin/busybox $out/bin/devmem")
   ];
