@@ -32,6 +32,8 @@ in
         ln -s /vendor/firmware/$f $out/lib/firmware/$f
       done
       ln -s /nvdata/APCFG/APRDEB/WIFI $out/lib/firmware/mt6739-wlan-nvram.bin
+      mkdir -p $out/lib/firmware/powervr
+      ln -s /vendor/firmware/rgx.fw.signed $out/lib/firmware/powervr/rogue_22.49.21.16_ddk19.fw
     '')
   ];
 }
