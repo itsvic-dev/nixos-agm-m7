@@ -99,6 +99,13 @@ github.com/LgPWNd/Alcatel_mt6739_5059R_and_5041C_universal_kernel-4.4.95-,
 - `PVR_I_WANT_A_BROKEN_VULKAN_DRIVER=1 vulkaninfo` lists "PowerVR Rogue GE8100", Vulkan 1.2. Device creation runs about 56 firmware commands without HWR.
 - Fixed: MMU flush, cleanup and `SYNC` must hold a runtime PM reference. Without it the firmware read one slot past the KCCB write offset and later kicks failed, so `vulkaninfo` hung.
 
+## Compute (done)
+
+- `tools/vk-compute` (installed as `vk-compute [groups]`): GLSL compute shader, each invocation writes `i * 3 + 1`, checked on the CPU. Passes up to 16384 groups (1M invocations) without HWR.
+- The 1.9 CDM kick writes the command fields to registers: control stream base 0x480, border colour table 0x17A8, thread barrier 0x708, `PDS_CTRL` 0x600 (only bits 24-31, the CDM task limit), `TPU` 0x1780, context switch 0x498 to 0x4C0. With a task limit of 0 no CDM task runs; the kernel sets 48.
+- Heaps: with BRN 65273 the firmware runs PDS and USC code relative to 0xA800000000 and 0xBA00000000, so the kernel reports the 1.9 heap layout (general 0x65C0000000, 2 GiB; transfer from 2 MiB, inside the first 1 GiB).
+- Still 0: `TPU`, `TPU_ARRAYS_CDM`, `COMPUTE_THREAD_BARRIER`, YUV coefficients. Not needed for this test.
+
 ## Plan
 
 1. Platform: MFG power domains, clocks and DT node. Read the core ID register. Done.
