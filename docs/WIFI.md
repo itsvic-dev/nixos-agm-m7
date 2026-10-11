@@ -1,6 +1,6 @@
 # Wi-Fi research
 
-Status: CONSYS powers on, talks over BTIF, and `tools/wmt-init` brings its firmware up (both ROM patches, RF calibration, coex) (2026-10-11). The vendor gen2 driver (`drivers/staging/mt6739-wlan`) connects with iwd and passes traffic (2026-10-11). See `CONSYS-RE.md` and `WMT-PROTOCOL.md`.
+Status: Wi-Fi starts at boot and connects with iwd (2026-10-11). `mt6739-consys` powers CONSYS on and brings up the WMT firmware, and the vendor gen2 driver (`drivers/staging/mt6739-wlan`) runs Wi-Fi. NixOS loads the firmware from the phone's vendor partition (`nixos/vendor.nix`). See `CONSYS-RE.md` and `WMT-PROTOCOL.md`.
 
 ## What the stock system uses
 
@@ -23,10 +23,11 @@ Status: CONSYS powers on, talks over BTIF, and `tools/wmt-init` brings its firmw
 
 1. Done: CONN power domain (`mtk-pm-domains`, SPM `CONN_PWR_CON` 0x32c, bus protection 0x6000 at INFRACFG 0x2a0/0x2a4), LDOs `vcn18`, `vcn33_bt`, `vcn28`, CPU reset in TOPRGU 0x10007018. The hardware ID reads 0x699 on the first poll.
 2. Done: the 2 MiB shared memory (reserved, EMI remap at INFRACFG 0x10001380; the EMI MPU region is skipped, it only restricts access), CPU reset release. The ROM waits in a loop at PC 0x98d2.
-3. Done: BTIF in PIO mode (`/sys/kernel/debug/mt6739-consys/btif`, `power`). `tools/wmt-init.c` (static, run on the phone with the firmware in `/root/fw`) does the WMT/STP bring-up: MAND to FULL mode, both ROM patches (1_1 then 1_0), resets, MCU clock, LTE coex, RF calibration, coex, co-clock, FM strap. Every step returns the expected event.
-4. Done: the gen2 Wi-Fi driver over the AHB host interface (0x180f0000, IRQ SPI 234, AP DMA HIF channel). It downloads `WIFI_RAM_CODE_6755` with `request_firmware()`. A WMT shim replaces `wmt_drv.ko`, and `wlan_on=1` probes the device after `wmt-init`. Current kernels refuse to DMA-map vmalloc memory, so the HIF copies those buffers through kmalloc memory.
+3. Done: BTIF in PIO mode (`/sys/kernel/debug/mt6739-consys/btif`, `power`). The WMT/STP bring-up was first done from userspace over this node, then moved into `mt6739-consys` (`mt6739_consys_get()`): MAND to FULL mode, both ROM patches (1_1 then 1_0), resets, MCU clock, LTE coex, RF calibration, coex, co-clock, FM strap. Every step returns the expected event.
+4. Done: the gen2 Wi-Fi driver over the AHB host interface (0x180f0000, IRQ SPI 234, AP DMA HIF channel). It downloads `WIFI_RAM_CODE_6755` with `request_firmware()`. A WMT shim replaces `wmt_drv.ko`, calls `mt6739_consys_get()`, and probes when the module loads (`autostart`). `wlan_on=0`/`1` stops and starts Wi-Fi with CONSYS. Current kernels refuse to DMA-map vmalloc memory, so the HIF copies those buffers through kmalloc memory.
 5. Next: the Wi-Fi NVRAM file from LineageOS. Without it the MAC address changes on every boot and the scan shows a fake open network `NVRAM WARNING: Err = 0x01`.
-6. Later: start Wi-Fi at boot, move the WMT bring-up into the kernel, then maybe a clean driver that uses the vendor driver as reference.
+6. Done: Wi-Fi at boot (`nixos/wifi.nix` loads the module after `/vendor` is mounted) and the WMT bring-up in the kernel.
+7. Later: maybe a clean driver that uses the vendor driver as reference.
 
 MediaTek's MT6739 platform source for the WMT stack is public in github.com/gemian/cosmo-linux-kernel-4.4 (`drivers/misc/mediatek/connectivity/common/common_main/`).
 
