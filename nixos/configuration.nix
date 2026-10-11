@@ -10,6 +10,7 @@
   imports = [
     "${modulesPath}/profiles/minimal.nix"
     ./rootfs.nix
+    ./weston.nix
   ];
 
   # The kernel and the initramfs come from boot.img (scripts/build.sh).
@@ -48,8 +49,6 @@
     wantedBy = [ "getty.target" ];
   };
 
-  services.seatd.enable = true;
-
   services.openssh.enable = true;
   users.users.root.openssh.authorizedKeys.keys = [
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPQ9kubQPsQKJdtOLG35DApD9IWNU5gR6Dm+e2cy2L83"
@@ -65,7 +64,7 @@
     fastfetch
     i2c-tools
     libgpiod
-    weston
+    foot
     (runCommand "devmem" { } "mkdir -p $out/bin; ln -s ${busybox}/bin/busybox $out/bin/devmem")
   ];
 
