@@ -59,7 +59,7 @@ LineageOS stays usable. We use it for the first install, and to read the kernel 
    ./scripts/nixos-push.sh
    ```
 
-   This writes `/data/nixos.img` (3 GB).
+   This writes `/data/nixos.img` (4 GB).
 
 3. Build `boot.img`:
 

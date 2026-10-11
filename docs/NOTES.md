@@ -62,7 +62,8 @@ PSCI `SYSTEM_RESET` and `SYSTEM_OFF` both hang in the ATF. The watchdog is stopp
 ## NixOS
 
 - `flake.nix` builds NixOS 26.05 for aarch64 on the Rosetta builder. The kernel and the initramfs still come from `boot.img` (`boot.kernel.enable = false`, `boot.initrd.enable = false`).
-- `scripts/nixos-push.sh` builds the root image, grows it to 3 GB on the Mac (Android's `truncate` and `resize2fs` cannot), and copies it to `/data/nixos.img`.
+- `scripts/nixos-push.sh` builds the root image, grows it to 4 GB on the Mac (Android's `truncate` and `resize2fs` cannot), and copies it to `/data/nixos.img`.
+- To grow the running root: `fallocate -l <size> /mnt/data/nixos.img`, `losetup -c /dev/loop0`, then the `EXT4_IOC_RESIZE_FS` ioctl on `/` (`resize2fs` cannot open the busy loop device). A full root makes the phone's auto-GC delete paths during `nix copy`, which shows up as "path ... is not valid".
 - `scripts/nixos-deploy.sh [boot|switch]` copies a new system closure over SSH and sets the system profile. `/sbin/init` in the image points to that profile, so `boot` takes effect at the next boot from `recovery`.
 - `ssh root@172.16.42.1`. `ttyGS0` has a root autologin. systemd-networkd gives the Mac 172.16.42.2 over DHCP.
 - The kernel needs `NETDEVICES` (else `SO_BINDTODEVICE` fails and networkd, resolved and sshd break) and nftables. `MEMCG` crashes the kernel when systemd loads BPF programs, so it stays off.

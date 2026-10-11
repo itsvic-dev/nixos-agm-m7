@@ -3,7 +3,7 @@
 set -euo pipefail
 here=$(cd "$(dirname "$0")/.." && pwd)
 export PATH=$HOME/Library/Android/sdk/platform-tools:$PATH
-size=${1:-3G}
+size=${1:-4G}
 img=$here/out/nixos.img
 
 nix build "$here#packages.aarch64-linux.rootfs" -o "$here/out/nixos-rootfs"
