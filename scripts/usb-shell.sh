@@ -8,7 +8,8 @@ sleep 20
 dev=""
 for i in $(seq 1 "$timeout"); do
 	for d in $(ls /dev/cu.usbmodem* 2>/dev/null || true); do
-		if (exec 3<>"$d") 2>/dev/null; then
+		# The preloader port shows up for a few seconds only.
+		if (exec 3<>"$d") 2>/dev/null && sleep 3 && (exec 3<>"$d") 2>/dev/null; then
 			dev=$d
 			break 2
 		fi
