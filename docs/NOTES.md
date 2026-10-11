@@ -36,7 +36,7 @@ LK loads at 0x46000000. Facts found by disassembly:
 
 ## Restart
 
-PSCI `SYSTEM_RESET` hangs in the ATF. The `mtk_wdt` restart handler must run first (`mediatek,lk-normal-restart`, priority 192). It sets `AUTO_START` (the bootloaders read it as "boot without power key") and clears `DDR_RESERVE` (else the bootloaders stall on the orange-state screen).
+PSCI `SYSTEM_RESET` and `SYSTEM_OFF` both hang in the ATF. The watchdog is stopped during shutdown, so a hung power off needs a long press or a battery pull. The `mtk_wdt` restart handler must run first (`mediatek,lk-normal-restart`, priority 192). It sets `AUTO_START` (the bootloaders read it as "boot without power key") and clears `DDR_RESERVE` (else the bootloaders stall on the orange-state screen).
 
 ## userdata
 
