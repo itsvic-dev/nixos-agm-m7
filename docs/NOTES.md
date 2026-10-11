@@ -54,6 +54,27 @@ PSCI `SYSTEM_RESET` hangs in the ATF. The `mtk_wdt` restart handler must run fir
 - `ssh user@172.16.42.1`.
 - Do not upstream: pmOS (Nura) and Mobile NixOS do not accept AI-written code.
 
+## PMIC
+
+- The pwrap registers are the same as on MT6765, but the preloader also enables the INT1 interrupt group. The mainline MT6765 entry ignores INT1, and the pwrap interrupt then storms until the watchdog fires. The MT6739 entry turns INT1 off.
+- The PMIC interrupt is EINT 182 (virtual pin 168), level high.
+- The pwrap reset is infracfg `0x140` bit 0.
+- Long-press reset: the mainline keys driver turns it off unless the DT sets it. We keep the stock setting: one key, `power-off-time-sec = <0>`.
+- The stock kernel also reads a wrong date from the RTC. Android keeps the time in software.
+
+## Keypad
+
+The keypad is an 8x9 matrix (key = row * 9 + col). The hang-up key is the PMIC power key. The PMIC home key is not connected.
+
+| Row, col | Key |
+|---|---|
+| 0,1 | side key (`KEY_F11`) |
+| 3,3 / 5,3 | left / right soft key (`KEY_MENU` / `KEY_BACK`) |
+| 4,3 / 5,4 / 4,4 / 3,4 / 6,3 | D-pad up / right / down / left / center (`KEY_ENTER`) |
+| 7,3 | call (`KEY_SEND`) |
+| 7,4 3,5 6,4 4,5 5,5 6,5 7,5 3,6 4,6 | 1 to 9 |
+| 5,6 / 6,6 / 7,6 | * / 0 / # |
+
 ## Hardware status
 
 | Part | Status |
@@ -61,10 +82,11 @@ PSCI `SYSTEM_RESET` hangs in the ATF. The `mtk_wdt` restart handler must run fir
 | CPUs, GIC, timer, PSCI | works |
 | Clocks (apmixedsys, topckgen, infracfg) | works, `clk_ignore_unused` on cmdline |
 | Pinctrl, GPIO, EINT | works |
-| eMMC | works, 52 MHz, fixed `vemc` regulator |
+| eMMC | works, 52 MHz, `vemc` from the PMIC |
 | USB device | works, PIO only |
 | Watchdog, restart | works |
 | Display | not done (needs a DBI trigger driver) |
-| Keypad, power key | not done |
-| PMIC, battery | not done |
+| Keypad, power key | works (`mt6779-keypad`, `mtk-pmic-keys`) |
+| PMIC (pwrap, MT6357 regulators, RTC, auxadc) | works, `regulator_ignore_unused` on cmdline |
+| Battery, charger, power off | not done |
 | SD card, Wi-Fi, BT, modem, audio, camera, GPU | not done |
