@@ -10,7 +10,7 @@
   imports = [
     "${modulesPath}/profiles/minimal.nix"
     ./rootfs.nix
-    ./weston.nix
+    ./labwc.nix
   ];
 
   # The kernel and the initramfs come from boot.img (scripts/build.sh).
@@ -64,7 +64,6 @@
     fastfetch
     i2c-tools
     libgpiod
-    foot
     (runCommand "devmem" { } "mkdir -p $out/bin; ln -s ${busybox}/bin/busybox $out/bin/devmem")
   ];
 
