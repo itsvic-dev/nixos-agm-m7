@@ -23,8 +23,17 @@ in
 
   systemd.services.nix-register-rootfs = {
     wantedBy = [ "multi-user.target" ];
-    before = [ "nix-daemon.socket" "nix-daemon.service" ];
-    unitConfig.ConditionPathExists = "/nix-path-registration";
+    before = [
+      "nix-daemon.socket"
+      "nix-daemon.service"
+      "shutdown.target"
+    ];
+    after = [ "local-fs.target" ];
+    conflicts = [ "shutdown.target" ];
+    unitConfig = {
+      DefaultDependencies = false;
+      ConditionPathExists = "/nix-path-registration";
+    };
     serviceConfig.Type = "oneshot";
     script = ''
       ${config.nix.package.out}/bin/nix-store --load-db < /nix-path-registration
