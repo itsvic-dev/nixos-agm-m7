@@ -92,14 +92,20 @@ in
   services.logind.settings.Login.HandlePowerKey = "ignore";
 
   systemd.defaultUnit = "graphical.target";
+  systemd.services."getty@tty1".enable = false;
+  systemd.services."autovt@tty1".enable = false;
 
   systemd.services.sway = {
     wantedBy = [ "graphical.target" ];
+    restartIfChanged = false;
     after = [
       "systemd-user-sessions.service"
       "getty@tty1.service"
     ];
-    conflicts = [ "getty@tty1.service" ];
+    conflicts = [
+      "getty@tty1.service"
+      "autovt@tty1.service"
+    ];
     environment.WLR_RENDERER = "pixman";
     path = [
       pkgs.bash
