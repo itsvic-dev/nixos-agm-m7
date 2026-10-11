@@ -124,6 +124,16 @@ LK turns on the panel and the path OVL0 -> RDMA0 -> DBI0 (mutex 0). The panel ha
 - Our DRM device has no vblank support, so the atomic helpers fake the flip-done events. Compositors work with that.
 - The kernel has no module support, so the NixOS `modprobe` activation snippet is disabled.
 
+## systemd initrd
+
+- LK puts `root=/dev/ram` on the kernel command line. Our part of the command line comes later and has `root=fstab`, which wins. Without a bootloader, NixOS's `boot.kernelParams` only reach the kernel through `boot.img`, so `boot-parts` writes them into `cmdline`.
+- `init=/nix/var/nix/profiles/system/init`: the initrd resolves the symlink inside the new root, so `nixos-deploy.sh boot` is enough for userspace changes.
+- Store paths in initrd unit scripts are not copied into the initrd. Use `boot.initrd.systemd.extraBin` (`dmctl` failed with status 127).
+- A device-mapper device created without libdevmapper's udev handshake gets `SYSTEMD_READY=0` (on `add` events always). systemd then stops everything that depends on it. `99-zz-userdata.rules` sets it ready.
+- The initrd is 81 MB unpacked. With xz and without TPM2, FIDO2 and LVM it is 17 MB, and `boot.img` 22.4 MB. `recovery` holds 24 MiB.
+- NixOS sets `loglevel=4`, which hides most messages from the pstore console. We use `boot.consoleLogLevel = 8`.
+- Debug: `systemd.log_target=kmsg systemd.journald.forward_to_kmsg=1` on the command line puts the whole initrd log into pstore. `systemd.debug_shell=ttyGS0` did not give a shell on the USB serial port.
+
 ## Hardware status
 
 | Part | Status |

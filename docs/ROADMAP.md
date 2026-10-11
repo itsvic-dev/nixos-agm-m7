@@ -18,16 +18,17 @@ Findings are in `NOTES.md`. This file tracks what is done and what is next.
 - Display: DRM driver for the DBI path that LK sets up, with fbcon.
 - Battery: fuel gauge (current, coulomb counting, temperature), charger detection.
 - I2C0 and I2C1, touchscreen, HL7005 charger.
+- Flake builds the kernel (from GitHub) and `boot.img` parts. NixOS systemd initrd replaces the busybox initramfs.
 - Graphical session: `labwc` with `foot` and the `wvkbd` on-screen keyboard.
 - Fast test loop: flash `recovery` from NixOS and `reboot recovery` through the RTC boot flag.
 
 ## Now
 
-1. Build the kernel and `boot.img` in the flake.
-2. Replace our busybox initramfs with the NixOS systemd initrd (unlock `userdata`, mount the loop image).
+Nothing. Pick from the follow-ups.
 
 ## Follow-ups
 
+- Shrink the initrd (OpenSSL, libxml2, Kerberos and more are still in), so `boot.img` has more room in `recovery`.
 - Drop the `userdata` encryption once updating and reflashing from NixOS is reliable. Reformatting `userdata` deletes the LineageOS data, so ask first.
 - Remove `regulator_ignore_unused` from the cmdline. First find which regulators must stay on.
 - RTC: Linux reads the date as 2069-12-31. Check the year mapping against the stock driver (base year 1968).

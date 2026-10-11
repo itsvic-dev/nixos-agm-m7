@@ -36,32 +36,23 @@ Mainline Linux and NixOS on the AGM M7, a rugged keypad phone with a MediaTek MT
 The bootloader (LK) cannot boot an image from USB here, so we use the `recovery` partition:
 
 - A normal boot starts the stock system (LineageOS) from `boot`.
-- A boot into recovery (`adb reboot recovery`) starts our kernel from `recovery`.
-- Our initramfs unlocks `userdata`, mounts `/data/nixos.img` as a loop device, and starts NixOS from it.
+- A boot into recovery (`adb reboot recovery` from LineageOS, or `systemctl reboot --reboot-argument=recovery` from NixOS) starts our kernel from `recovery`.
+- The NixOS systemd initrd unlocks `userdata`, mounts it at `/run/userdata`, loop-mounts `nixos.img` as root, and starts the current system profile (`init=/nix/var/nix/profiles/system/init`).
 
-LineageOS stays usable. We use it to flash `recovery` and to read the kernel log from pstore after a crash.
+LineageOS stays usable. We use it for the first install, and to read the kernel log from pstore after a crash.
 
 ## Requirements
 
 - An AGM M7 with an unlocked bootloader, running a LineageOS GSI with root (`phh-su`).
 - `adb` on the host.
-- A Linux arm64 build machine for the kernel. We use an OrbStack VM named `agm-m7` (Debian, with `gcc`, `make`, `bc`, `flex`, `bison`, `libssl-dev`, `cpio`, `python3` and a static `busybox` at `/bin/busybox`).
-- Nix with flakes and an `aarch64-linux` builder for NixOS.
+- Nix with flakes and an `aarch64-linux` builder. The flake builds the kernel (from [linux-mt6739-agm-m7](https://github.com/itsvic-dev/linux-mt6739-agm-m7), branch `agm-m7`), the initrd and the NixOS system.
+- Optional, for fast kernel development: a Linux arm64 machine with a checkout in `linux/`. We use an OrbStack VM named `agm-m7` (Debian, with `gcc`, `make`, `bc`, `flex`, `bison`, `libssl-dev`, `cpio`, `python3` and a static `busybox` at `/bin/busybox`).
 
 ## Build and install
 
 1. Dump the `userdata` key once. Build `tools/dmtable.c` as a static armhf binary, run it as root on LineageOS, and save its output as `secrets/userdata-dm-table.txt`. Never commit this file.
 
-2. Build the kernel and `boot.img` in the build VM:
-
-   ```
-   ./scripts/config.sh
-   ./scripts/build.sh
-   ```
-
-   This writes `out/boot.img`. The initramfs contains the `userdata` key.
-
-3. Build the NixOS image and copy it to the phone (with LineageOS running):
+2. Build the NixOS image and copy it to the phone (with LineageOS running):
 
    ```
    ./scripts/nixos-push.sh
@@ -69,34 +60,47 @@ LineageOS stays usable. We use it to flash `recovery` and to read the kernel log
 
    This writes `/data/nixos.img` (3 GB).
 
-4. Flash `out/boot.img` to `recovery` and boot it:
+3. Build `boot.img`:
+
+   ```
+   ./scripts/mkboot-nix.sh
+   ```
+
+   Nix builds the kernel, the DTB and the initrd. The script appends the `userdata` key as a second cpio archive, so the key never enters the Nix store, and writes `out/boot.img`.
+
+4. Flash it to `recovery` and boot it, from LineageOS:
 
    ```
    ./scripts/test-recovery.sh <log name>
    ```
 
-   The script waits for LineageOS to come back, then copies the kernel log from pstore to `logs/<log name>/`. Stop it with Ctrl-C if you want to stay in NixOS. To flash by hand, `dd` the image to `/dev/block/platform/bootdevice/by-name/recovery` as root, then run `adb reboot recovery`.
+   The script waits for LineageOS to come back, then copies the kernel log from pstore to `logs/<log name>/`. Stop it with Ctrl-C if you want to stay in NixOS.
+
+## Update
+
+From a running NixOS, LineageOS is not needed:
+
+- NixOS only: `./scripts/nixos-deploy.sh switch` (now) or `boot` (at the next boot).
+- Kernel or initrd: commit and push the kernel, `nix flake update linux`, `./scripts/nixos-deploy.sh boot`, `./scripts/mkboot-nix.sh`, then `./scripts/nixos-flash.sh`. It writes `out/boot.img` to `recovery` and reboots into it (about 50 s).
+- Fast kernel development: `./scripts/config.sh` and `./scripts/build.sh` in the VM build `out/boot.img` incrementally from `linux/`, with the old busybox initramfs.
 
 ## Use
 
-- SSH: `ssh root@172.16.42.1`. The phone gives the host 172.16.42.2 over DHCP. If macOS does not create the USB network interface, replug the cable.
+- SSH: `ssh root@172.16.42.1`. The phone gives the host 172.16.42.2 over DHCP.
 - Serial: `/dev/cu.usbmodem*` (macOS) or `/dev/ttyACM*` (Linux), with root autologin.
 - The screen runs `labwc` (wlroots, pixman renderer) as `user`, with the `foot` terminal and the `wvkbd` on-screen keyboard. The keypad and the touchscreen both work.
-- To test a new kernel from a running NixOS: `./scripts/nixos-flash.sh`. It writes `out/boot.img` to `recovery` and reboots into it (about 50 s). LineageOS is not needed for this.
-- To update NixOS without a new image: `./scripts/nixos-deploy.sh switch` (now) or `boot` (at the next boot).
 - `systemctl reboot` goes back to LineageOS. `systemctl reboot --reboot-argument=recovery` boots NixOS again.
-- In the initramfs, `touch /tmp/noboot` within 10 s keeps the busybox shell. `/data/nixos.disable` skips NixOS.
+- If the initrd fails, it writes the failed units to the kernel log and reboots into LineageOS. `test-recovery.sh` or `cat /sys/fs/pstore/console-ramoops` then shows the log.
 
 ## Layout
 
 - `linux/`: kernel tree (separate repo). Board DT: `arch/arm64/boot/dts/mediatek/mt6739-agm-m7.dts`. Config fragment: `arch/arm64/configs/agm-m7.config`.
-- `nixos/`: NixOS configuration and root image.
-- `initramfs/init`: busybox init that unlocks `userdata` and starts NixOS.
+- `flake.nix`, `nixos/`: kernel, initrd, `boot.img` parts, NixOS configuration and root image.
+- `initramfs/init`: busybox init for the VM build (fallback).
 - `scripts/`: build, flash, deploy and test helpers. `scripts/re/` has LK and boot.img analysis helpers.
 - `tools/`: small device-mapper helpers.
 - `stock/`: decompiled stock DT and ODM DTBO.
 
 ## Planned
 
-- Build the kernel and `boot.img` in the flake, so that one `nix build` gives everything.
 - Touchscreen, Weston, backlight. See `docs/ROADMAP.md`.
