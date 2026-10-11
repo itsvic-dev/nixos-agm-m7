@@ -30,6 +30,7 @@ Nothing. Pick from the follow-ups.
 
 1. Wi-Fi: port the MediaTek gen2 driver (see `WIFI.md`).
 2. A phone-friendly UI for the D-pad and keypad, for example with Sway: the on-screen keyboard appears when you press a key, instead of always taking screen space.
+3. T9 input method for the keypad: multi-tap and predictive (T9) text entry as a Wayland input method (`input-method-unstable-v2`, which Sway supports), with word lists per language (English, Polish).
 
 ## Follow-ups
 
