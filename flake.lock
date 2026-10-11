@@ -3,11 +3,11 @@
     "linux": {
       "flake": false,
       "locked": {
-        "lastModified": 1791749645,
-        "narHash": "sha256-VXdlB26bBxrsoWgz+pCzsVfUYV4ouGHZrVjwDzBqdes=",
+        "lastModified": 1791750845,
+        "narHash": "sha256-212QUOtn138tMISVSklaPnXljcEGTE8EvdaJr9fohMg=",
         "owner": "itsvic-dev",
         "repo": "linux-mt6739-agm-m7",
-        "rev": "9638d726b66794a1d90e4d3a9e95e62a31f7a510",
+        "rev": "87f489c81e2798a3ede06ef1976a2b4476d29b62",
         "type": "github"
       },
       "original": {
