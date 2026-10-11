@@ -23,6 +23,7 @@
 
 
   networking.hostName = "agm-m7";
+  time.timeZone = "Europe/Warsaw";
   networking.useNetworkd = true;
   networking.useDHCP = false;
   systemd.network.networks."10-usb0" = {
