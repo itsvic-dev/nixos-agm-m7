@@ -10,21 +10,15 @@
   imports = [
     "${modulesPath}/profiles/minimal.nix"
     ./rootfs.nix
+    ./initrd.nix
     ./labwc.nix
   ];
 
-  # The kernel and the initramfs come from boot.img (scripts/build.sh).
-  boot.kernel.enable = false;
-  boot.initrd.enable = false;
   boot.loader.grub.enable = false;
   boot.loader.initScript.enable = false;
   # Built-in drivers only, so /proc/sys/kernel/modprobe does not exist.
   system.activationScripts.modprobe = lib.mkForce "";
 
-  fileSystems."/" = {
-    device = "/dev/disk/by-label/nixos";
-    fsType = "ext4";
-  };
 
   networking.hostName = "agm-m7";
   networking.useNetworkd = true;
