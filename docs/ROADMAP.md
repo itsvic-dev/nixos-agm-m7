@@ -28,6 +28,7 @@ Findings are in `NOTES.md`. This file tracks what is done and what is next.
 
 ## Follow-ups
 
+- Drop the `userdata` encryption once updating and reflashing from NixOS is reliable. Reformatting `userdata` deletes the LineageOS data, so ask first.
 - Remove `regulator_ignore_unused` from the cmdline. First find which regulators must stay on.
 - RTC: Linux reads the date as 2069-12-31. Check the year mapping against the stock driver (base year 1968).
 - Long-press reset does not work on mainline (a hung power off needed a battery pull). Check the PMIC key settings.
