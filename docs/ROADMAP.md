@@ -33,6 +33,8 @@ Nothing. Pick from the follow-ups.
 
 ## Follow-ups
 
+- Root on an SD card (MSDC1, mainline `mtk-sd`). It keeps USB free for serial and networking, and the encrypted `userdata` image can go.
+- USB host mode: VBUS boost in the HL7005 driver (`OPA_MODE`) and role switching through the WUSB3801. Host mode removes USB serial and networking while in use.
 - Shrink the initrd (OpenSSL, libxml2, Kerberos and more are still in), so `boot.img` has more room in `recovery`.
 - Drop the `userdata` encryption once updating and reflashing from NixOS is reliable. Reformatting `userdata` deletes the LineageOS data, so ask first.
 - Remove `regulator_ignore_unused` from the cmdline. First find which regulators must stay on.

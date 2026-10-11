@@ -25,7 +25,7 @@ Status: Wi-Fi starts at boot and connects with iwd (2026-10-11). `mt6739-consys`
 2. Done: the 2 MiB shared memory (reserved, EMI remap at INFRACFG 0x10001380; the EMI MPU region is skipped, it only restricts access), CPU reset release. The ROM waits in a loop at PC 0x98d2.
 3. Done: BTIF in PIO mode (`/sys/kernel/debug/mt6739-consys/btif`, `power`). The WMT/STP bring-up was first done from userspace over this node, then moved into `mt6739-consys` (`mt6739_consys_get()`): MAND to FULL mode, both ROM patches (1_1 then 1_0), resets, MCU clock, LTE coex, RF calibration, coex, co-clock, FM strap. Every step returns the expected event.
 4. Done: the gen2 Wi-Fi driver over the AHB host interface (0x180f0000, IRQ SPI 234, AP DMA HIF channel). It downloads `WIFI_RAM_CODE_6755` with `request_firmware()`. A WMT shim replaces `wmt_drv.ko`, calls `mt6739_consys_get()`, and probes when the module loads (`autostart`). `wlan_on=0`/`1` stops and starts Wi-Fi with CONSYS. Current kernels refuse to DMA-map vmalloc memory, so the HIF copies those buffers through kmalloc memory.
-5. Next: the Wi-Fi NVRAM file from LineageOS. Without it the MAC address changes on every boot and the scan shows a fake open network `NVRAM WARNING: Err = 0x01`.
+5. Done: NVRAM. The driver requests `mt6739-wlan-nvram.bin`, which NixOS links to `/nvdata/APCFG/APRDEB/WIFI` (1024-byte `WIFI_CFG_PARAM_STRUCT` plus a 2-byte trailer). It has the MAC address (offset 4) and the RF settings. Without it the MAC changes on every boot and the scan shows a fake open network `NVRAM WARNING: Err = 0x01`.
 6. Done: Wi-Fi at boot (`nixos/wifi.nix` loads the module after `/vendor` is mounted) and the WMT bring-up in the kernel.
 7. Later: maybe a clean driver that uses the vendor driver as reference.
 
