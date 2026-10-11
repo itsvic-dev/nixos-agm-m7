@@ -1,0 +1,10 @@
+/linux/
+/ref/
+/out/
+/logs/
+/pmos/
+/backup/
+/secrets/
+/re/
+*.img
+*.o
