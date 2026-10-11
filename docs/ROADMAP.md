@@ -14,12 +14,9 @@ Findings are in `NOTES.md`. This file tracks what is done and what is next.
 - Keypad matrix and PMIC power key.
 - Battery voltage from the auxadc.
 - Power off through the PMIC.
+- NixOS 26.05 userspace from a flake in this repo.
 
 ## Now
-
-1. Replace the pmOS userspace with (Mobile) NixOS, as a flake in this repo. Not for upstream.
-
-## Next
 
 1. Display: a DBI command-mode panel (GC9306, 240x320), at least simple DRM.
 
@@ -32,4 +29,7 @@ Findings are in `NOTES.md`. This file tracks what is done and what is next.
 - Battery: charger and fuel gauge. Mainline has no MT6357 driver for them.
 - Remove `clk_ignore_unused` from the cmdline.
 - USB DMA (MUSB runs in PIO mode).
+- NixOS: build the kernel and `boot.img` in the flake. Maybe use Mobile NixOS parts. Not for upstream.
+- NixOS: clean shutdown of the loop-mounted root.
+- `MEMCG` crashes in `__refill_obj_stock` when systemd loads BPF.
 - SD card, Wi-Fi, Bluetooth, audio, vibrator, backlight, GPU.

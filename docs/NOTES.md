@@ -54,6 +54,15 @@ PSCI `SYSTEM_RESET` and `SYSTEM_OFF` both hang in the ATF. The watchdog is stopp
 - `ssh user@172.16.42.1`.
 - Do not upstream: pmOS (Nura) and Mobile NixOS do not accept AI-written code.
 
+## NixOS
+
+- `flake.nix` builds NixOS 26.05 for aarch64 on the Rosetta builder. The kernel and the initramfs still come from `boot.img` (`boot.kernel.enable = false`, `boot.initrd.enable = false`).
+- `scripts/nixos-push.sh` builds the root image, grows it to 3 GB on the Mac (Android's `truncate` and `resize2fs` cannot), and copies it to `/data/nixos.img`.
+- `scripts/nixos-deploy.sh [boot|switch]` copies a new system closure over SSH and sets the system profile. `/sbin/init` in the image points to that profile, so `boot` takes effect at the next boot from `recovery`.
+- `ssh root@172.16.42.1`. `ttyGS0` has a root autologin. systemd-networkd gives the Mac 172.16.42.2 over DHCP.
+- The kernel needs `NETDEVICES` (else `SO_BINDTODEVICE` fails and networkd, resolved and sshd break) and nftables. `MEMCG` crashes the kernel when systemd loads BPF programs, so it stays off.
+- At shutdown, systemd cannot unmount `/mnt/data`, because the root image is on it.
+
 ## PMIC
 
 - The pwrap registers are the same as on MT6765, but the preloader also enables the INT1 interrupt group. The mainline MT6765 entry ignores INT1, and the pwrap interrupt then storms until the watchdog fires. The MT6739 entry turns INT1 off.
@@ -92,4 +101,5 @@ The keypad is an 8x9 matrix (key = row * 9 + col). The hang-up key is the PMIC p
 | Power off | works (PMIC `RG_PWRHOLD`) |
 | Battery voltage | works (`adc-battery`) |
 | Charger, fuel gauge | not done |
+| Userspace | NixOS 26.05 from `/data/nixos.img` |
 | SD card, Wi-Fi, BT, modem, audio, camera, GPU | not done |
