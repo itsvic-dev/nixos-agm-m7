@@ -14,6 +14,7 @@
     ./sway.nix
     ./vendor.nix
     ./wifi.nix
+    ./firefox.nix
   ];
 
   boot.loader.grub.enable = false;
