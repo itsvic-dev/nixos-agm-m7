@@ -117,6 +117,13 @@ LK turns on the panel and the path OVL0 -> RDMA0 -> DBI0 (mutex 0). The panel ha
 - Touch: the ODM overlay says 0x2e, but the Telink TLSC6x answers at 0x38 with the FocalTech FT6x36 register layout (chip ID 0x64 at 0xa3). INT is GPIO 11 (EINT, falling), reset GPIO 51, supply `vldo28`.
 - I2C1 has the HL7005 charger (0x6a). Its register 3 reads 0xf0 (vendor code 7), so the vendor driver's ID check (vendor 2) and mainline `bq2415x` do not match it. Register 5 bit 5 (`IO_LEVEL`) always reads 1. The safety register (6) only takes the first write after a chip reset; we set 1250 mA and 4.20 V. The overlay also lists sensors at 0x15, 0x30, 0x48, 0x68 and 0x77 there, but none answer.
 
+## Graphical session
+
+- `nixos/labwc.nix`: `labwc` as a systemd service on tty1 (`PAMName=login`, user `user`), `WLR_RENDERER=pixman`. Autostart: `wvkbd-mobintl -H 130` and `foot` (DejaVu Sans Mono, size 6). `wvkbd`'s `-L` is the landscape height; portrait uses `-H`.
+- `nixos/weston.nix` (not imported): Weston 15 kiosk shell with `foot`. Weston's desktop shell crashed (SIGSEGV in `weston_desktop_xdg_surface_destroy`) after a protocol error from `weston-terminal`. Weston's on-screen keyboard needs `text-input-v1` clients (only its demo apps) and does not fit 240 px.
+- Our DRM device has no vblank support, so the atomic helpers fake the flip-done events. Compositors work with that.
+- The kernel has no module support, so the NixOS `modprobe` activation snippet is disabled.
+
 ## Hardware status
 
 | Part | Status |
@@ -136,5 +143,5 @@ LK turns on the panel and the path OVL0 -> RDMA0 -> DBI0 (mutex 0). The panel ha
 | Battery voltage, percent | works (`adc-battery` with the stock OCV table) |
 | Charger detection, fuel gauge | works (`mt6357-charger`) |
 | Charging | works (`hl7005`, external charger on I2C1) |
-| Userspace | NixOS 26.05 from `/data/nixos.img` |
+| Userspace | NixOS 26.05 from `/data/nixos.img`, `labwc` session |
 | SD card, Wi-Fi, BT, modem, audio, camera, GPU | not done |

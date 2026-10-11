@@ -81,7 +81,7 @@ LineageOS stays usable. We use it to flash `recovery` and to read the kernel log
 
 - SSH: `ssh root@172.16.42.1`. The phone gives the host 172.16.42.2 over DHCP. If macOS does not create the USB network interface, replug the cable.
 - Serial: `/dev/cu.usbmodem*` (macOS) or `/dev/ttyACM*` (Linux), with root autologin.
-- The screen shows the console on tty1, with root autologin. The keypad works as a keyboard.
+- The screen runs `labwc` (wlroots, pixman renderer) as `user`, with the `foot` terminal and the `wvkbd` on-screen keyboard. The keypad and the touchscreen both work.
 - To test a new kernel from a running NixOS: `./scripts/nixos-flash.sh`. It writes `out/boot.img` to `recovery` and reboots into it (about 50 s). LineageOS is not needed for this.
 - To update NixOS without a new image: `./scripts/nixos-deploy.sh switch` (now) or `boot` (at the next boot).
 - `systemctl reboot` goes back to LineageOS. `systemctl reboot --reboot-argument=recovery` boots NixOS again.
