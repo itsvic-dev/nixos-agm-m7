@@ -13,6 +13,7 @@
     ./initrd.nix
     ./sway.nix
     ./vendor.nix
+    ./wifi.nix
   ];
 
   boot.loader.grub.enable = false;
@@ -34,10 +35,6 @@
       EmitRouter = false;
       EmitDNS = false;
     };
-  };
-  networking.wireless.iwd = {
-    enable = true;
-    settings.General.EnableNetworkConfiguration = true;
   };
   networking.nftables.enable = true;
   networking.firewall.allowedUDPPorts = [ 67 ];
@@ -62,7 +59,6 @@
     evtest
     fastfetch
     i2c-tools
-    iw
     libgpiod
     (runCommand "devmem" { } "mkdir -p $out/bin; ln -s ${busybox}/bin/busybox $out/bin/devmem")
   ];
