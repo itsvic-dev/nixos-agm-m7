@@ -12,7 +12,7 @@ Mainline Linux and NixOS on the AGM M7, a rugged keypad phone with a MediaTek MT
 |---|---|---|
 | CPU (4x A53), GIC, timer, PSCI | Y | |
 | Clocks, pinctrl, GPIO, EINT | Y | `clk_ignore_unused` on the cmdline |
-| eMMC | Y | 52 MHz. `userdata` is encrypted (dm-crypt), see below |
+| eMMC | Y | HS200 (192 MHz). `userdata` is encrypted (dm-crypt), see below |
 | USB device | Y | Serial shell and ECM networking. PIO only, no DMA |
 | Watchdog, restart | Y | Through `mtk_wdt`. PSCI reset and power off hang in the ATF |
 | Power off | Y | Through the PMIC. With USB connected, the phone starts offline charging |
@@ -30,7 +30,7 @@ Mainline Linux and NixOS on the AGM M7, a rugged keypad phone with a MediaTek MT
 | Audio | N | |
 | Camera, flashlight | N | |
 | Vibrator | N | |
-| GPU (PowerVR GE8100) | N | Software rendering only |
+| GPU (PowerVR GE8100) | Partial | The vendor DDK 1.9 firmware boots on the mainline `powervr` driver, see [docs/GPU.md](docs/GPU.md). No job submission yet, so software rendering only |
 
 ## How it boots
 

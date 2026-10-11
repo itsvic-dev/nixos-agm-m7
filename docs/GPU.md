@@ -53,9 +53,20 @@ github.com/LgPWNd/Alcatel_mt6739_5059R_and_5041C_universal_kernel-4.4.95-,
 - genpd keeps all domains of a provider on until every consumer has probed. The GPU never probes yet, so CONN stayed on and the CONSYS ROM hung at PC 0x98d4. CONN now has `MTK_SCPD_NO_STAY_ON`.
 - The vendor MFG sequence also changes `INFRA_TOPAXI_SI0_CTL` (0x10001200; bit 7 way_en, bit 1 bypass) around the bus protect. The mainline driver does not do that yet.
 
+## Stage 2 (done)
+
+- DT compatible `mediatek,mt6739-gpu` selects the DDK 1.9 path (`pvr_ddk19.c`). The rest of the driver is unchanged.
+- Firmware: `/vendor/firmware/rgx.fw.signed`, linked as `powervr/rogue_22.49.21.16_ddk19.fw` by `nixos/vendor.nix`.
+- The driver synthesises the layout table and the feature set (from `rgxconfig_km_22.V.21.16.h`) instead of reading a mainline firmware trailer.
+- MIPS: 32 MiB heap at 0xC0000000, one 32 KiB contiguous page table, boot data (regs, page table, stack, `RGXFWIF_INIT`) in the boot/NMI data page, wrapper config with the physical register bank address, no trampoline.
+- `pvr_ddk19_fwif.h` has the 1.9 structs. Offsets come from the firmware DWARF (`tools/fwif-dwarf.py`) and are checked with `static_assert`.
+- HW APM writes to `mfg_cfg` after every power-on, as `MTKInitHWAPM` does.
+- Result: `firmware_started` is set, compatibility checks report BVNC 22.49.21.16, DDK 1.9 build 4893595, MIPS. The firmware trace works (decode with `rgx_fwif_sf.h`: id = bits 0-11, group = bits 12-15, argument count = bits 16-19).
+- The probe then stops on purpose with `-ENODEV` and halts the firmware. `powervr` is blacklisted; load it with `modprobe powervr`.
+
 ## Plan
 
 1. Platform: MFG power domains, clocks and DT node. Read the core ID register. Done.
-2. Firmware boot: repack the ELF for the mainline loader, add a DDK 1.9 init path, pass the compatibility check.
+2. Firmware boot: repack the ELF for the mainline loader, add a DDK 1.9 init path, pass the compatibility check. Done.
 3. Jobs: DDK 1.9 command queues, geometry and 3D commands, render targets.
 4. Mesa: GE8100 device info, vkcube, then Zink.
