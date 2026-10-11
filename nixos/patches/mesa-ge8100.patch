@@ -1,0 +1,138 @@
+diff -ruN a/src/imagination/common/device_info/ge8100.h b/src/imagination/common/device_info/ge8100.h
+--- a/src/imagination/common/device_info/ge8100.h	1970-01-01 01:00:00
++++ b/src/imagination/common/device_info/ge8100.h	2026-10-11 23:29:13
+@@ -0,0 +1,107 @@
++/*
++ * SPDX-License-Identifier: MIT
++ */
++
++#ifndef GE8100_H
++#define GE8100_H
++
++#include <stdbool.h>
++
++#include "pvr_device_info.h"
++
++#define PVR_DEVICE_IDENT_22_V_21_16 \
++   .device_id = 0x22021016, .series_name = "Rogue", \
++   .public_name = "GE8100", .arch = PVR_DEVICE_ARCH_ROGUE
++
++static const struct pvr_device_features pvr_device_features_22_V_21_16 = {
++   .has_astc = true,
++   .has_common_store_size_in_dwords = true,
++   .has_compute = true,
++   .has_compute_overlap = true,
++   /* .has_gs_rta_support = true, */
++   .has_ipf_creq_pf = true,
++   .has_isp_max_tiles_in_flight = true,
++   .has_isp_samples_per_pixel = true,
++   .has_max_instances_per_pds_task = true,
++   .has_max_multisample = true,
++   .has_max_partitions = true,
++   .has_max_usc_tasks = true,
++   .has_num_clusters = true,
++   .has_num_raster_pipes = true,
++   .has_pbe2_in_xe = true,
++   .has_pbe_filterable_f16 = true,
++   .has_pbe_yuv = true,
++   .has_roguexe = true,
++   .has_simple_internal_parameter_format = true,
++   .has_simple_internal_parameter_format_v1 = true,
++   .has_simple_parameter_format_version = true,
++   .has_slc_cache_line_size_bits = true,
++   .has_tile_size_16x16 = true,
++   .has_tile_size_x = true,
++   .has_tile_size_y = true,
++   .has_tpu_parallel_instances = true,
++   .has_unified_store_depth = true,
++   .has_usc_f16sop_u8 = true,
++   .has_usc_itrsmp = true,
++   .has_usc_itrsmp_enhanced = true,
++   .has_usc_itr_parallel_instances = true,
++   .has_usc_min_output_registers_per_pix = true,
++   .has_usc_slots = true,
++   .has_uvs_banks = true,
++   .has_uvs_pba_entries = true,
++   .has_uvs_vtx_entries = true,
++   .has_vdm_cam_size = true,
++
++   .common_store_size_in_dwords = 1024U * 4U * 4U,
++   .isp_max_tiles_in_flight = 4U,
++   .isp_samples_per_pixel = 1U,
++   .max_instances_per_pds_task = 32U,
++   .max_multisample = 4U,
++   .max_partitions = 10U,
++   .max_usc_tasks = 104U,
++   .num_clusters = 1U,
++   .num_raster_pipes = 1U,
++   .simple_parameter_format_version = 1U,
++   .slc_cache_line_size_bits = 512U,
++   .tile_size_x = 16U,
++   .tile_size_y = 16U,
++   .tpu_parallel_instances = 4U,
++   .unified_store_depth = 208U,
++   .usc_itr_parallel_instances = 16U,
++   .usc_min_output_registers_per_pix = 2U,
++   .usc_slots = 64U,
++   .uvs_banks = 4U,
++   .uvs_pba_entries = 320U,
++   .uvs_vtx_entries = 288U,
++   .vdm_cam_size = 64U,
++
++   .has_s8xe = true,
++};
++
++static const struct pvr_device_enhancements
++   pvr_device_enhancements_22_49_21_16 = {
++      .has_ern35421 = true,
++      .has_ern38748 = true,
++      .has_ern42307 = true,
++   };
++
++static const struct pvr_device_quirks pvr_device_quirks_22_49_21_16 = {
++   .has_brn66011 = true,
++   .has_brn70165 = true,
++   .has_brn74056 = true,
++};
++
++static const struct pvr_device_info pvr_device_info_22_49_21_16 = {
++   .ident = {
++      PVR_DEVICE_IDENT_22_V_21_16,
++      .b = 22,
++      .v = 49,
++      .n = 21,
++      .c = 16,
++   },
++   .features = pvr_device_features_22_V_21_16,
++   .enhancements = pvr_device_enhancements_22_49_21_16,
++   .quirks = pvr_device_quirks_22_49_21_16,
++};
++
++#endif /* GE8100_H */
+diff -ruN a/src/imagination/common/pvr_device_info.c b/src/imagination/common/pvr_device_info.c
+--- a/src/imagination/common/pvr_device_info.c	2026-10-11 23:28:49
++++ b/src/imagination/common/pvr_device_info.c	2026-10-11 23:28:49
+@@ -35,6 +35,7 @@
+ #include "device_info/gx6250.h"
+ #include "device_info/gx6650.h"
+ #include "device_info/ge7800.h"
++#include "device_info/ge8100.h"
+ #include "device_info/ge8300.h"
+ #include "device_info/axe-1-16m.h"
+ #include "device_info/bxe-2-32.h"
+@@ -53,6 +54,7 @@
+    &pvr_device_info_15_5_1_64,
+    &pvr_device_info_22_67_54_30,
+    &pvr_device_info_22_68_54_30,
++   &pvr_device_info_22_49_21_16,
+    &pvr_device_info_22_102_54_38,
+    &pvr_device_info_33_15_11_3,
+    &pvr_device_info_36_29_52_182,
+@@ -85,6 +87,7 @@
+       CASE_PACKED_BVNC_DEVICE_INFO(4, 46, 6, 62);
+       CASE_PACKED_BVNC_DEVICE_INFO(5, 9, 1, 46);
+       CASE_PACKED_BVNC_DEVICE_INFO(15, 5, 1, 64);
++      CASE_PACKED_BVNC_DEVICE_INFO(22, 49, 21, 16);
+       CASE_PACKED_BVNC_DEVICE_INFO(22, 67, 54, 30);
+       CASE_PACKED_BVNC_DEVICE_INFO(22, 68, 54, 30);
+       CASE_PACKED_BVNC_DEVICE_INFO(22, 102, 54, 38);
