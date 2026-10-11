@@ -64,6 +64,16 @@ github.com/LgPWNd/Alcatel_mt6739_5059R_and_5041C_universal_kernel-4.4.95-,
 - Result: `firmware_started` is set, compatibility checks report BVNC 22.49.21.16, DDK 1.9 build 4893595, MIPS. The firmware trace works (decode with `rgx_fwif_sf.h`: id = bits 0-11, group = bits 12-15, argument count = bits 16-19).
 - The probe then stops on purpose with `-ENODEV` and halts the firmware. `powervr` is blacklisted; load it with `modprobe powervr`.
 
+## Stage 3a (done)
+
+- The firmware keeps running after probe. `fw_dev.initialised` is set, the DRM device registers.
+- Kernel CCB: 128 commands of 144 bytes, MTS kick on DM GP. Completion through sync words (`SYNC` command), no return slots.
+- Firmware CCB: processed in the IRQ thread. Commands are only logged for now.
+- Runtime PM: `FORCED_IDLE_REQ`, then `OFF_REQ` (forced), then `pvr_fw_stop()`, then MFG power off. Resume restarts the firmware and waits for `firmware_started`. A forced power off without forced idle first makes the firmware assert (`rgxfw_irq.c:693`).
+- MMU cache flush uses `MMUCACHE` with the mainline flag values (they match 1.9).
+- Job ioctls (VM and job contexts, free lists, HWRT datasets, submit) return `-EOPNOTSUPP`.
+- Debugfs `dri/13000000.gpu/ddk19/`: `state` (power state, CCB offsets, assert, trace) and `sync` (write to send a `SYNC`). Decode the trace with `tools/fwtrace-decode.py rgx_fwif_sf.h < state`.
+
 ## Plan
 
 1. Platform: MFG power domains, clocks and DT node. Read the core ID register. Done.
