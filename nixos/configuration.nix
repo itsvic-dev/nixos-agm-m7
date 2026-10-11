@@ -12,6 +12,7 @@
     ./rootfs.nix
     ./initrd.nix
     ./sway.nix
+    ./vendor.nix
   ];
 
   boot.loader.grub.enable = false;
