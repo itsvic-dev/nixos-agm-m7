@@ -91,6 +91,14 @@ github.com/LgPWNd/Alcatel_mt6739_5059R_and_5041C_universal_kernel-4.4.95-,
 - Heaps: with BRN 65273 the PDS, USC and VisTest heaps must sit in one 1 GiB PC entry each (1.9: PDS 0xA800000000, USC 0xBA00000000). The kernel still reports the mainline heaps.
 - Debugging: `ddk19/state` lists HWR entries (type, DM, BIF/MMU status, PC address); `ddk19/nmi` takes an NMI and prints the MIPS EPC, cause and bad address. Disassemble with `mipsel-linux-gnu-objdump -d -l -M micromips`; the firmware has symbols and line info.
 
+## Stage 4 (Mesa, started)
+
+- `nixos/gpu.nix`: Mesa overlay with only the `imagination` Vulkan driver (no OpenGL, EGL, GBM or LLVM; about 13 MiB) and `vulkan-tools`. Sway stays on pixman.
+- `nixos/patches/mesa-ge8100.patch`: device entry for 22.49.21.16. The features are the GE8300 ones for now.
+- Kernel: free lists (1.9 adds a HWR counter at offset 40), render contexts (TA and 3D common contexts back to back, 328 bytes) and transfer contexts (one 3D common context). Each queue state object is followed by its RF command.
+- `PVR_I_WANT_A_BROKEN_VULKAN_DRIVER=1 vulkaninfo` lists "PowerVR Rogue GE8100", Vulkan 1.2. Device creation runs about 56 firmware commands without HWR.
+- Fixed: MMU flush, cleanup and `SYNC` must hold a runtime PM reference. Without it the firmware read one slot past the KCCB write offset and later kicks failed, so `vulkaninfo` hung.
+
 ## Plan
 
 1. Platform: MFG power domains, clocks and DT node. Read the core ID register. Done.
