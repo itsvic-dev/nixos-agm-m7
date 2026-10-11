@@ -44,10 +44,14 @@ telnetd -l /bin/sh
 log "usb0: $(ifconfig usb0 | grep inet)"
 
 mount_data() {
-	[ -f /etc/userdata.table ] || return 1
-	dmctl create userdata rw "$(cat /etc/userdata.table)" >/dev/null || return 1
+	[ -f /etc/userdata.table ] || { log "data: no /etc/userdata.table"; return 1; }
+	for i in $(seq 1 30); do
+		[ -b /dev/mmcblk0p33 ] && break
+		sleep 1
+	done
+	out=$(dmctl create userdata rw "$(cat /etc/userdata.table)" 2>&1) || { log "data: dmctl: $out"; return 1; }
 	mkdir -p /data
-	mount -t f2fs /dev/dm-0 /data
+	out=$(mount -t f2fs /dev/dm-0 /data 2>&1) || { log "data: mount: $out"; return 1; }
 }
 
 boot_rootfs() {
