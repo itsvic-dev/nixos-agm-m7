@@ -24,7 +24,8 @@ Mainline Linux and NixOS on the AGM M7, a rugged keypad phone with a MediaTek MT
 | Touchscreen | Y | Telink TLSC6x at I2C0 0x38, works with `edt-ft5x06` (FT6x36 layout) |
 | I2C | Y | I2C0 (touch), I2C1 (charger). Other buses not added yet |
 | SD card | N | |
-| Wi-Fi, Bluetooth, GPS, FM | N | MT6739 connectivity (CONSYS) |
+| Wi-Fi | Partial | Vendor gen2 driver in staging, iwd. Manual start with `tools/wifi-up.sh`. No NVRAM yet |
+| Bluetooth, GPS, FM | N | MT6739 connectivity (CONSYS) |
 | Modem | N | |
 | Audio | N | |
 | Camera, flashlight | N | |
