@@ -26,6 +26,11 @@ Findings are in `NOTES.md`. This file tracks what is done and what is next.
 
 Nothing. Pick from the follow-ups.
 
+## Next
+
+1. Wi-Fi: port the MediaTek gen2 driver (see `WIFI.md`).
+2. A phone-friendly UI for the D-pad and keypad, for example with Sway: the on-screen keyboard appears when you press a key, instead of always taking screen space.
+
 ## Follow-ups
 
 - Shrink the initrd (OpenSSL, libxml2, Kerberos and more are still in), so `boot.img` has more room in `recovery`.
