@@ -13,6 +13,16 @@ let
     };
   });
 
+  # Firefox's toolbars ask for more than the 240 px wide screen; drop the tab strip and minimum widths.
+  chrome = ''
+    #TabsToolbar, #sidebar-main, #sidebar-box { visibility: collapse !important; }
+    #nav-bar, #urlbar-container, #urlbar, #search-container, toolbar, toolbaritem, toolbarbutton {
+      min-width: 0 !important;
+    }
+    #urlbar-container { flex: 1 1 0 !important; }
+    #main-window, #browser, #tabbrowser-tabbox, browser { min-width: 0 !important; min-height: 0 !important; }
+  '';
+
   firefox = pkgs.wrapFirefox unwrapped {
     extraPrefs = ''
       pref("layout.css.devPixelsPerPx", "0.6");
@@ -31,6 +41,24 @@ let
       pref("toolkit.telemetry.enabled", false);
       pref("datareporting.healthreport.uploadEnabled", false);
       pref("datareporting.policy.dataSubmissionEnabled", false);
+      pref("ui.prefersReducedMotion", 1);
+      pref("toolkit.cosmeticAnimations.enabled", false);
+      pref("general.smoothScroll", false);
+      pref("layout.frame_rate", 30);
+      pref("network.prefetch-next", false);
+      pref("network.predictor.enabled", false);
+      pref("browser.startup.preXulSkeletonUI", false);
+
+      try {
+        const sss = Components.classes["@mozilla.org/content/style-sheet-service;1"]
+          .getService(Components.interfaces.nsIStyleSheetService);
+        const io = Components.classes["@mozilla.org/network/io-service;1"]
+          .getService(Components.interfaces.nsIIOService);
+        sss.loadAndRegisterSheet(io.newURI("data:text/css," + encodeURIComponent(${builtins.toJSON chrome})),
+          sss.USER_SHEET);
+      } catch (e) {
+        Components.utils.reportError(e);
+      }
     '';
   };
 in
