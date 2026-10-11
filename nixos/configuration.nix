@@ -21,6 +21,8 @@
   boot.loader.initScript.enable = false;
   # Built-in drivers only, so /proc/sys/kernel/modprobe does not exist.
   system.activationScripts.modprobe = lib.mkForce "";
+  # Loaded by hand while the DDK 1.9 GPU firmware path is in development.
+  boot.blacklistedKernelModules = [ "powervr" ];
 
 
   networking.hostName = "agm-m7";
