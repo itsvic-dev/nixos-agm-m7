@@ -109,6 +109,14 @@ LK turns on the panel and the path OVL0 -> RDMA0 -> DBI0 (mutex 0). The panel ha
 - LK's framebuffer is at 0x77ee0000 (`atag,videolfb`, `mblock-4-framebuffer`, no-map). `/dev/mem` reaches it only through mmap (`devmem`), not `dd`.
 - The DBI register layout is the same as the vendor `mt6771/dispsys/ddp_reg_dbi.h`.
 
+## I2C and touch
+
+- MT6739 I2C uses the v1 register layout plus `LTIMING` at 0x2c. The vendor driver also sets `CLOCK_DIV` (low byte only), the `IO_CONFIG` "AED" field (0x1f << 4) and leaves `DCM_EN` at 0xe. We copy that.
+- `i2cdetect` without `-r` probes with zero-length quick writes, which `i2c-mt65xx` does not support. The bus then looks empty. Use `i2cdetect -r` or `i2cget`.
+- A GPIO trace (`/dev/mem` mmap of `GPIO_DIN` 0x10005240 in a tight loop) is enough to decode 100 kHz I2C on the wire.
+- Touch: the ODM overlay says 0x2e, but the Telink TLSC6x answers at 0x38 with the FocalTech FT6x36 register layout (chip ID 0x64 at 0xa3). INT is GPIO 11 (EINT, falling), reset GPIO 51, supply `vldo28`.
+- I2C1 has the HL7005 charger (0x6a). The overlay also lists sensors at 0x15, 0x30, 0x48, 0x68 and 0x77 there, but none answer.
+
 ## Hardware status
 
 | Part | Status |
@@ -121,6 +129,8 @@ LK turns on the panel and the path OVL0 -> RDMA0 -> DBI0 (mutex 0). The panel ha
 | Watchdog, restart | works |
 | Display | works (`mt6739-dbi` DRM, fbcon), relies on LK's setup |
 | Keypad, power key | works (`mt6779-keypad`, `mtk-pmic-keys`) |
+| I2C0, I2C1 | works (`i2c-mt65xx`, own MT6739 entry) |
+| Touchscreen | works (`edt-ft5x06`) |
 | PMIC (pwrap, MT6357 regulators, RTC, auxadc) | works, `regulator_ignore_unused` on cmdline |
 | Power off | works (PMIC `RG_PWRHOLD`) |
 | Battery voltage, percent | works (`adc-battery` with the stock OCV table) |

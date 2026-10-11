@@ -17,11 +17,12 @@ Findings are in `NOTES.md`. This file tracks what is done and what is next.
 - NixOS 26.05 userspace from a flake in this repo.
 - Display: DRM driver for the DBI path that LK sets up, with fbcon.
 - Battery: fuel gauge (current, coulomb counting, temperature), charger detection.
+- I2C0 and I2C1, touchscreen.
 - Fast test loop: flash `recovery` from NixOS and `reboot recovery` through the RTC boot flag.
 
 ## Now
 
-1. I2C (the controller does not work yet), then the HL7005 charger on I2C1 and the TLSC6x touchscreen on I2C0.
+1. HL7005 charger on I2C1.
 2. Build the kernel and `boot.img` in the flake.
 3. Weston.
 4. Touchscreen.
