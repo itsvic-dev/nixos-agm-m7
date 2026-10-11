@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ lib, pkgs, ... }:
 
 let
   files = [
@@ -7,11 +7,10 @@ let
     "WIFI_RAM_CODE_6755"
     "WMT_SOC.cfg"
   ];
-in
-{
-  # The blobs stay on the phone's own vendor partition. No fsck and noload, so Linux never writes to it.
-  fileSystems."/vendor" = {
-    device = "/dev/disk/by-partlabel/vendor";
+
+  # No fsck and noload, so Linux never writes to the phone's own partitions.
+  readOnly = label: {
+    device = "/dev/disk/by-partlabel/${label}";
     fsType = "ext4";
     noCheck = true;
     options = [
@@ -20,14 +19,19 @@ in
       "nofail"
     ];
   };
+in
+{
+  fileSystems."/vendor" = readOnly "vendor";
+  fileSystems."/nvdata" = readOnly "nvdata";
 
   hardware.firmwareCompression = "none";
   hardware.firmware = [
     (pkgs.runCommand "vendor-firmware" { } ''
       mkdir -p $out/lib/firmware
-      for f in ${toString files}; do
+      for f in ${lib.escapeShellArgs files}; do
         ln -s /vendor/firmware/$f $out/lib/firmware/$f
       done
+      ln -s /nvdata/APCFG/APRDEB/WIFI $out/lib/firmware/mt6739-wlan-nvram.bin
     '')
   ];
 }

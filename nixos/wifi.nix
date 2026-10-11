@@ -8,12 +8,16 @@
 
   environment.systemPackages = [ pkgs.iw ];
 
-  # The CONSYS ROM patches and the Wi-Fi firmware are on /vendor.
+  # The CONSYS ROM patches and the Wi-Fi firmware are on /vendor, the NVRAM on /nvdata.
   systemd.services.wifi = {
     description = "Load the MT6739 Wi-Fi driver";
     wantedBy = [ "multi-user.target" ];
     requires = [ "vendor.mount" ];
-    after = [ "vendor.mount" ];
+    wants = [ "nvdata.mount" ];
+    after = [
+      "vendor.mount"
+      "nvdata.mount"
+    ];
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
