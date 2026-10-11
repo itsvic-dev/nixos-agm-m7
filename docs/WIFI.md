@@ -1,6 +1,6 @@
 # Wi-Fi research
 
-Status: research only, nothing ported yet (2026-10-11).
+Status: CONSYS powers on and reports hardware ID 0x699 (`mt6739-consys`, 2026-10-11). No firmware, BTIF or Wi-Fi driver yet. The power-on sequence is in `CONSYS-RE.md`.
 
 ## What the stock system uses
 
@@ -18,6 +18,15 @@ Status: research only, nothing ported yet (2026-10-11).
 - `consys-reserve-memory`: 2 MiB, no-map (0x77c00000 on stock), shared with the CONSYS firmware, with EMI MPU protection and an EMI remap register.
 - PMIC LDOs: `vcn18`, `vcn28`, `vcn33_wifi`, `vcn33_bt`. DCXO clock buffer for the connectivity clock.
 - GPIO 118: GPS LNA. No Wi-Fi GPIOs.
+
+## Progress
+
+1. Done: CONN power domain (`mtk-pm-domains`, SPM `CONN_PWR_CON` 0x32c, bus protection 0x6000 at INFRACFG 0x2a0/0x2a4), LDOs `vcn18`, `vcn33_bt`, `vcn28`, CPU reset in TOPRGU 0x10007018. The hardware ID reads 0x699 on the first poll.
+2. Next: the 2 MiB shared memory (reserved memory, EMI remap at INFRACFG 0x10001380, EMI MPU through the ATF SMC 0xC2000209), then release the CONSYS CPU from reset.
+3. Then: a BTIF driver, so the WMT core can talk to the CONSYS MCU (STP protocol), and the ROM patch download.
+4. Last: the gen2 Wi-Fi driver over the AHB host interface.
+
+MediaTek's MT6739 platform source for the WMT stack is public in github.com/gemian/cosmo-linux-kernel-4.4 (`drivers/misc/mediatek/connectivity/common/common_main/`).
 
 ## Sources
 
