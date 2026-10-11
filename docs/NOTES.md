@@ -36,7 +36,7 @@ LK loads at 0x46000000. Facts found by disassembly:
 
 ## Restart
 
-PSCI `SYSTEM_RESET` and `SYSTEM_OFF` both hang in the ATF. The watchdog is stopped during shutdown, so a hung power off needs a long press or a battery pull. The `mtk_wdt` restart handler must run first (`mediatek,lk-normal-restart`, priority 192). It sets `AUTO_START` (the bootloaders read it as "boot without power key") and clears `DDR_RESERVE` (else the bootloaders stall on the orange-state screen).
+PSCI `SYSTEM_RESET` and `SYSTEM_OFF` both hang in the ATF. The watchdog is stopped during shutdown, so a hung power off needs a battery pull (a long press did not help). We power off through the PMIC instead: clear `RG_PWRHOLD` (`0xa08` bit 0), as the vendor kernel does. With USB connected, the phone then starts offline charging. The `mtk_wdt` restart handler must run first (`mediatek,lk-normal-restart`, priority 192). It sets `AUTO_START` (the bootloaders read it as "boot without power key") and clears `DDR_RESERVE` (else the bootloaders stall on the orange-state screen).
 
 ## userdata
 
@@ -60,6 +60,7 @@ PSCI `SYSTEM_RESET` and `SYSTEM_OFF` both hang in the ATF. The watchdog is stopp
 - The PMIC interrupt is EINT 182 (virtual pin 168), level high.
 - The pwrap reset is infracfg `0x140` bit 0.
 - Long-press reset: the mainline keys driver turns it off unless the DT sets it. We keep the stock setting: one key, `power-off-time-sec = <0>`.
+- The mainline auxadc scale did not divide by the ADC resolution. Fixed. `bat_adc` gives the battery voltage (`adc-battery`, matches the stock kernel within about 60 mV while charging). `batt_v` reads garbage, and some channels time out.
 - The stock kernel also reads a wrong date from the RTC. Android keeps the time in software.
 
 ## Keypad
@@ -88,5 +89,7 @@ The keypad is an 8x9 matrix (key = row * 9 + col). The hang-up key is the PMIC p
 | Display | not done (needs a DBI trigger driver) |
 | Keypad, power key | works (`mt6779-keypad`, `mtk-pmic-keys`) |
 | PMIC (pwrap, MT6357 regulators, RTC, auxadc) | works, `regulator_ignore_unused` on cmdline |
-| Battery, charger, power off | not done |
+| Power off | works (PMIC `RG_PWRHOLD`) |
+| Battery voltage | works (`adc-battery`) |
+| Charger, fuel gauge | not done |
 | SD card, Wi-Fi, BT, modem, audio, camera, GPU | not done |
