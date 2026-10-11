@@ -85,6 +85,19 @@ The keypad is an 8x9 matrix (key = row * 9 + col). The hang-up key is the PMIC p
 | 7,4 3,5 6,4 4,5 5,5 6,5 7,5 3,6 4,6 | 1 to 9 |
 | 5,6 / 6,6 / 7,6 | * / 0 / # |
 
+## Display
+
+LK turns on the panel and the path OVL0 -> RDMA0 -> DBI0 (mutex 0). The panel has its own frame memory, so each frame needs a trigger. The `mt6739-dbi` DRM driver keeps LK's setup and, for each update:
+
+1. waits until DBI `STA` (0x14013000) bit 4 (busy) is 0,
+2. sets OVL layer 3: `L3_CON` (0x090) format XRGB8888 with alpha off, `L3_PITCH` (0x0a4), `L3_ADDR` (0xfa0), and `SRC_CON` (0x02c) to layer 3 only,
+3. writes `0x2c` to `SCMD0` (0xf80), pulses `START` (0x00c) bit 15, and sets mutex 0 `EN` (0x14001020).
+
+- LK uses layer 0 for the logo and layer 3 (with per-pixel alpha) for the text. XRGB buffers have alpha 0, so alpha must be off.
+- The mode comes from DBI `ROI_SIZE` (0x06c), which LK sets to 240x320.
+- LK's framebuffer is at 0x77ee0000 (`atag,videolfb`, `mblock-4-framebuffer`, no-map). `/dev/mem` reaches it only through mmap (`devmem`), not `dd`.
+- The DBI register layout is the same as the vendor `mt6771/dispsys/ddp_reg_dbi.h`.
+
 ## Hardware status
 
 | Part | Status |
@@ -95,7 +108,7 @@ The keypad is an 8x9 matrix (key = row * 9 + col). The hang-up key is the PMIC p
 | eMMC | works, 52 MHz, `vemc` from the PMIC |
 | USB device | works, PIO only |
 | Watchdog, restart | works |
-| Display | not done (needs a DBI trigger driver) |
+| Display | works (`mt6739-dbi` DRM, fbcon), relies on LK's setup |
 | Keypad, power key | works (`mt6779-keypad`, `mtk-pmic-keys`) |
 | PMIC (pwrap, MT6357 regulators, RTC, auxadc) | works, `regulator_ignore_unused` on cmdline |
 | Power off | works (PMIC `RG_PWRHOLD`) |

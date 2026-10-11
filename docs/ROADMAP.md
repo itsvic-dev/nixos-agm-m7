@@ -15,10 +15,11 @@ Findings are in `NOTES.md`. This file tracks what is done and what is next.
 - Battery voltage from the auxadc.
 - Power off through the PMIC.
 - NixOS 26.05 userspace from a flake in this repo.
+- Display: DRM driver for the DBI path that LK sets up, with fbcon.
 
 ## Now
 
-1. Display: a DBI command-mode panel (GC9306, 240x320), at least simple DRM.
+Nothing. Pick from the follow-ups.
 
 ## Follow-ups
 
@@ -32,4 +33,6 @@ Findings are in `NOTES.md`. This file tracks what is done and what is next.
 - NixOS: build the kernel and `boot.img` in the flake. Maybe use Mobile NixOS parts. Not for upstream.
 - NixOS: clean shutdown of the loop-mounted root.
 - `MEMCG` crashes in `__refill_obj_stock` when systemd loads BPF.
-- SD card, Wi-Fi, Bluetooth, audio, vibrator, backlight, GPU.
+- Display: backlight control (`disp_pwm0`), panel power and init without LK, TE or a vblank event, DBI frame-done IRQ instead of polling.
+- macOS sometimes does not create the USB network interface. A cable replug fixes it.
+- SD card, Wi-Fi, Bluetooth, audio, vibrator, GPU.
