@@ -115,7 +115,7 @@ LK turns on the panel and the path OVL0 -> RDMA0 -> DBI0 (mutex 0). The panel ha
 - `i2cdetect` without `-r` probes with zero-length quick writes, which `i2c-mt65xx` does not support. The bus then looks empty. Use `i2cdetect -r` or `i2cget`.
 - A GPIO trace (`/dev/mem` mmap of `GPIO_DIN` 0x10005240 in a tight loop) is enough to decode 100 kHz I2C on the wire.
 - Touch: the ODM overlay says 0x2e, but the Telink TLSC6x answers at 0x38 with the FocalTech FT6x36 register layout (chip ID 0x64 at 0xa3). INT is GPIO 11 (EINT, falling), reset GPIO 51, supply `vldo28`.
-- I2C1 has the HL7005 charger (0x6a). The overlay also lists sensors at 0x15, 0x30, 0x48, 0x68 and 0x77 there, but none answer.
+- I2C1 has the HL7005 charger (0x6a). Its register 3 reads 0xf0 (vendor code 7), so the vendor driver's ID check (vendor 2) and mainline `bq2415x` do not match it. Register 5 bit 5 (`IO_LEVEL`) always reads 1. The safety register (6) only takes the first write after a chip reset; we set 1250 mA and 4.20 V. The overlay also lists sensors at 0x15, 0x30, 0x48, 0x68 and 0x77 there, but none answer.
 
 ## Hardware status
 
@@ -135,6 +135,6 @@ LK turns on the panel and the path OVL0 -> RDMA0 -> DBI0 (mutex 0). The panel ha
 | Power off | works (PMIC `RG_PWRHOLD`) |
 | Battery voltage, percent | works (`adc-battery` with the stock OCV table) |
 | Charger detection, fuel gauge | works (`mt6357-charger`) |
-| Charging | not done (external HL7005 on I2C1) |
+| Charging | works (`hl7005`, external charger on I2C1) |
 | Userspace | NixOS 26.05 from `/data/nixos.img` |
 | SD card, Wi-Fi, BT, modem, audio, camera, GPU | not done |

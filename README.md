@@ -20,7 +20,7 @@ Mainline Linux and NixOS on the AGM M7, a rugged keypad phone with a MediaTek MT
 | Keypad, power key | Y | All 22 keys. Long-press reset does not work |
 | Display | Partial | DRM and fbcon work. The driver reuses the panel setup from the bootloader. No backlight control |
 | Battery | Partial | `mt6357-charger` fuel gauge: voltage, current, temperature, coulomb counting from an OCV start value. Status comes from the gauge current |
-| Charger | Partial | USB detection works. The charger is an external HL7005 on I2C1 (not the MT6357 one), and it has no driver yet, so the battery does not charge under Linux. Charge in LineageOS or when powered off |
+| Charger | Partial | External HL7005 on I2C1 (`hl7005`): 4.20 V, input limit 500 mA, watchdog, 0 to 45 °C limit. No USB charger type detection, so always 500 mA input |
 | Touchscreen | Y | Telink TLSC6x at I2C0 0x38, works with `edt-ft5x06` (FT6x36 layout) |
 | I2C | Y | I2C0 (touch), I2C1 (charger). Other buses not added yet |
 | SD card | N | |
