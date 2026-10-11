@@ -4,4 +4,4 @@ set -euo pipefail
 here=$(cd "$(dirname "$0")/.." && pwd)
 
 "$here/scripts/kmake" Image.gz mediatek/mt6739-agm-m7.dtb
-ls -l "$here/out/arch/arm64/boot/Image.gz"
+ls -l "$here/${KOUT:-out}/arch/arm64/boot/Image.gz"

@@ -12,8 +12,8 @@ nix build "$here#packages.aarch64-linux.boot-parts" -o "$parts"
 image=$parts/Image.gz
 dtb=$parts/mt6739-agm-m7.dtb
 if [ "${KERNEL:-}" = vm ]; then
-	image=$out/arch/arm64/boot/Image.gz
-	dtb=$out/arch/arm64/boot/dts/mediatek/mt6739-agm-m7.dtb
+	image=$here/${KOUT:-out}/arch/arm64/boot/Image.gz
+	dtb=$here/${KOUT:-out}/arch/arm64/boot/dts/mediatek/mt6739-agm-m7.dtb
 fi
 
 mkdir -p "$tmp/root/etc"

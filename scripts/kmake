@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# usage: [KSRC=linux] [KOUT=out] kmake <make args>
 set -euo pipefail
 here=$(cd "$(dirname "$0")/.." && pwd)
-exec make -C "$here/linux" O="$here/out" ARCH=arm64 -j"$(nproc)" "$@"
+exec make -C "$here/${KSRC:-linux}" O="$here/${KOUT:-out}" ARCH=arm64 -j"$(nproc)" "$@"
