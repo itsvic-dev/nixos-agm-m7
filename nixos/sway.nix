@@ -18,7 +18,7 @@ let
     focus_follows_mouse no
 
     bindsym XF86Back exec pkill -RTMIN wvkbd-mobintl
-    bindsym Menu exec ${fuzzel}/bin/fuzzel
+    bindsym XF86MenuKB exec ${fuzzel}/bin/fuzzel
     bindsym XF86Send focus next
     bindsym XF86PowerOff kill
 
@@ -85,6 +85,10 @@ in
     ];
     conflicts = [ "getty@tty1.service" ];
     environment.WLR_RENDERER = "pixman";
+    path = [
+      pkgs.bash
+      pkgs.procps
+    ];
     serviceConfig = {
       User = "user";
       PAMName = "login";
