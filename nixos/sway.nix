@@ -3,6 +3,19 @@
 let
   fuzzel = pkgs.fuzzel.override { svgBackend = "nanosvg"; };
 
+  launchers = [
+    (pkgs.makeDesktopItem {
+      name = "netsurf";
+      desktopName = "NetSurf";
+      exec = "${pkgs.netsurf-browser}/bin/netsurf-gtk3 %u";
+    })
+    (pkgs.makeDesktopItem {
+      name = "w3m";
+      desktopName = "w3m";
+      exec = "${pkgs.foot}/bin/foot ${pkgs.w3m}/bin/w3m https://lite.duckduckgo.com/lite/";
+    })
+  ];
+
   status = pkgs.writeShellScript "sway-status" ''
     while :; do
       echo "$(cat /sys/class/power_supply/battery/capacity)%  $(date +%H:%M)"
@@ -57,7 +70,10 @@ in
     pkgs.foot
     fuzzel
     pkgs.wvkbd
-  ];
+    pkgs.netsurf-browser
+    pkgs.w3m
+  ]
+  ++ launchers;
 
   fonts.packages = [ pkgs.dejavu_fonts ];
 
