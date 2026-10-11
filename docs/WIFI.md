@@ -1,6 +1,6 @@
 # Wi-Fi research
 
-Status: CONSYS powers on and reports hardware ID 0x699 (`mt6739-consys`, 2026-10-11). No firmware, BTIF or Wi-Fi driver yet. The power-on sequence is in `CONSYS-RE.md`.
+Status: CONSYS powers on, talks over BTIF, and `tools/wmt-init` brings its firmware up (both ROM patches, RF calibration, coex) (2026-10-11). No Wi-Fi driver yet. See `CONSYS-RE.md` and `WMT-PROTOCOL.md`.
 
 ## What the stock system uses
 
@@ -22,9 +22,10 @@ Status: CONSYS powers on and reports hardware ID 0x699 (`mt6739-consys`, 2026-10
 ## Progress
 
 1. Done: CONN power domain (`mtk-pm-domains`, SPM `CONN_PWR_CON` 0x32c, bus protection 0x6000 at INFRACFG 0x2a0/0x2a4), LDOs `vcn18`, `vcn33_bt`, `vcn28`, CPU reset in TOPRGU 0x10007018. The hardware ID reads 0x699 on the first poll.
-2. Next: the 2 MiB shared memory (reserved memory, EMI remap at INFRACFG 0x10001380, EMI MPU through the ATF SMC 0xC2000209), then release the CONSYS CPU from reset.
-3. Then: a BTIF driver, so the WMT core can talk to the CONSYS MCU (STP protocol), and the ROM patch download.
-4. Last: the gen2 Wi-Fi driver over the AHB host interface.
+2. Done: the 2 MiB shared memory (reserved, EMI remap at INFRACFG 0x10001380; the EMI MPU region is skipped, it only restricts access), CPU reset release. The ROM waits in a loop at PC 0x98d2.
+3. Done: BTIF in PIO mode (`/sys/kernel/debug/mt6739-consys/btif`, `power`). `tools/wmt-init.c` (static, run on the phone with the firmware in `/root/fw`) does the WMT/STP bring-up: MAND to FULL mode, both ROM patches (1_1 then 1_0), resets, MCU clock, LTE coex, RF calibration, coex, co-clock, FM strap. Every step returns the expected event.
+4. Next: the gen2 Wi-Fi driver over the AHB host interface (0x180f0000, IRQ SPI 234, AP DMA HIF channel), which downloads `WIFI_RAM_CODE_6755` itself.
+5. Later: move the WMT bring-up into the kernel.
 
 MediaTek's MT6739 platform source for the WMT stack is public in github.com/gemian/cosmo-linux-kernel-4.4 (`drivers/misc/mediatek/connectivity/common/common_main/`).
 
