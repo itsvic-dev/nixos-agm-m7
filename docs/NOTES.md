@@ -22,7 +22,7 @@ LK loads at 0x46000000. Facts found by disassembly:
 ## Test loop
 
 1. Boot LineageOS (GSI). Root is `phh-su -c`.
-2. `scripts/build.sh` in the `agm-m7` OrbStack VM.
+2. `scripts/build.sh` in the `agm-m7` OrbStack VM, then `KERNEL=vm scripts/mkboot-nix.sh` on the host.
 3. `scripts/test-recovery.sh <name>` writes `out/boot.img` to `recovery`, runs `adb reboot recovery`, waits for LineageOS, and copies pstore to `logs/<name>/`.
 
 `fastboot flash recovery out/boot.img` also works.
@@ -48,7 +48,7 @@ PSCI `SYSTEM_RESET` and `SYSTEM_OFF` both hang in the ATF. The watchdog is stopp
 `userdata` (`mmcblk0p33`) has full-disk encryption: dm-crypt `aes-cbc-essiv:sha256` with a 128-bit key, f2fs inside.
 
 - `tools/dmtable.c` (static armhf, run as root on LineageOS) prints the dm table with the key. Keep it in `secrets/userdata-dm-table.txt`. Never commit it.
-- `scripts/build.sh` puts the table into the initramfs. `dmctl create userdata rw "$(cat /etc/userdata.table)"` creates `/dev/dm-0`.
+- `scripts/mkboot-nix.sh` appends the table to the initrd. `dmctl create userdata rw "$(cat /etc/userdata.table)"` creates `/dev/dm-0`.
 - Android runs `fsck.f2fs` on the raw encrypted partition at every boot, and it always fails with "Magic Mismatch". That is normal.
 
 ## postmarketOS

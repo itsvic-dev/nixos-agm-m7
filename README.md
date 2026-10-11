@@ -82,7 +82,7 @@ From a running NixOS, LineageOS is not needed:
 
 - NixOS only: `./scripts/nixos-deploy.sh switch` (now) or `boot` (at the next boot).
 - Kernel or initrd: commit and push the kernel, `nix flake update linux`, `./scripts/nixos-deploy.sh boot`, `./scripts/mkboot-nix.sh`, then `./scripts/nixos-flash.sh`. It writes `out/boot.img` to `recovery` and reboots into it (about 50 s).
-- Fast kernel development: `./scripts/config.sh` and `./scripts/build.sh` in the VM build `out/boot.img` incrementally from `linux/`, with the old busybox initramfs.
+- Fast kernel development: `./scripts/config.sh` and `./scripts/build.sh` in the VM build `Image.gz` and the DTB incrementally from `linux/`. `KERNEL=vm ./scripts/mkboot-nix.sh` then packs them with the NixOS initrd, and `./scripts/nixos-flash.sh` flashes the result.
 
 ## Use
 
@@ -96,7 +96,6 @@ From a running NixOS, LineageOS is not needed:
 
 - `linux/`: kernel tree (separate repo). Board DT: `arch/arm64/boot/dts/mediatek/mt6739-agm-m7.dts`. Config fragment: `arch/arm64/configs/agm-m7.config`.
 - `flake.nix`, `nixos/`: kernel, initrd, `boot.img` parts, NixOS configuration and root image.
-- `initramfs/init`: busybox init for the VM build (fallback).
 - `scripts/`: build, flash, deploy and test helpers. `scripts/re/` has LK and boot.img analysis helpers.
 - `tools/`: small device-mapper helpers.
 - `stock/`: decompiled stock DT and ODM DTBO.
