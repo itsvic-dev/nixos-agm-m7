@@ -1,8 +1,9 @@
-// usage: [WIDTH=n] [HEIGHT=n] [RAW=1] vk-triangle [clear|store]
+// usage: [WIDTH=n] [HEIGHT=n] [RAW=1] [PAUSE=s] [TILE=x,y] vk-triangle [clear|store]
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <vulkan/vulkan.h>
 
@@ -241,6 +242,15 @@ int main(int argc, char **argv)
 		.layers = 1,
 	}, NULL, &fb));
 
+	uint32_t vp_x = 0, vp_y = 0, vp_w = W, vp_h = H;
+
+	if (getenv("TILE")) {
+		sscanf(getenv("TILE"), "%u,%u", &vp_x, &vp_y);
+		vp_x *= 16;
+		vp_y *= 16;
+		vp_w = vp_h = 16;
+	}
+
 	VkPipelineLayout gfx_layout;
 	CHECK(vkCreatePipelineLayout(dev, &(VkPipelineLayoutCreateInfo){
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
@@ -276,9 +286,9 @@ int main(int argc, char **argv)
 		.pViewportState = &(VkPipelineViewportStateCreateInfo){
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
 			.viewportCount = 1,
-			.pViewports = &(VkViewport){ 0, 0, W, H, 0, 1 },
+			.pViewports = &(VkViewport){ vp_x, vp_y, vp_w, vp_h, 0, 1 },
 			.scissorCount = 1,
-			.pScissors = &(VkRect2D){ { 0, 0 }, { W, H } },
+			.pScissors = &(VkRect2D){ { vp_x, vp_y }, { vp_w, vp_h } },
 		},
 		.pRasterizationState = &(VkPipelineRasterizationStateCreateInfo){
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
@@ -502,6 +512,9 @@ int main(int argc, char **argv)
 	uint32_t want_corner = store ? GREEN : BLUE;
 	int ok = corner == want_corner && centre == (draw ? RED : want_corner);
 	printf("%s\n", ok ? "PASS" : "FAIL");
+
+	if (getenv("PAUSE"))
+		sleep(strtoul(getenv("PAUSE"), NULL, 0));
 
 	vkDeviceWaitIdle(dev);
 	vkDestroyDevice(dev, NULL);
