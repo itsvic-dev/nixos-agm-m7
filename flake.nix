@@ -13,7 +13,7 @@
     { nixpkgs, linux, ... }:
     let
       pkgs = nixpkgs.legacyPackages.aarch64-linux;
-      kernel = import ./nixos/kernel.nix {
+      kernel = import ./pkgs/kernel.nix {
         inherit (pkgs)
           stdenv
           linuxManualConfig
@@ -34,7 +34,7 @@
       nixosConfigurations.agm-m7 = agm-m7;
       packages.aarch64-linux = {
         inherit kernel;
-        boot-parts = pkgs.callPackage ./nixos/boot-parts.nix {
+        boot-parts = pkgs.callPackage ./pkgs/boot-parts.nix {
           inherit (agm-m7.config.system.build) kernel;
           initrd = agm-m7.config.system.build.initialRamdisk;
           inherit (agm-m7.config.boot) kernelParams;

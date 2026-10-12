@@ -6,7 +6,7 @@
 }:
 
 let
-  dmctl = pkgs.callPackage ./dmctl.nix { };
+  dmctl = pkgs.callPackage ../pkgs/dmctl.nix { };
 in
 {
   boot.kernelPackages = pkgs.linuxPackagesFor kernel;
