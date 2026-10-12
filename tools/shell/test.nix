@@ -32,6 +32,9 @@ let
   KEY_STAR = "522";
   KEY_RIGHT = "106";
   KEY_BACK = "158";
+  KEY_DOWN = "108";
+  KEY_ENTER = "28";
+  KEY_SHIFT = "42";
 
   # One entry without an icon, to show the letter tile.
   apps = runCommand "agm-shell-test-apps" { } ''
@@ -102,6 +105,21 @@ runCommand "agm-shell-test"
     sleep 1
     if kill -0 $menu 2>/dev/null; then
       echo "agm-menu is still running after Back"
+      cat $out/*.log
+      exit 1
+    fi
+  
+    ${agm-shell}/bin/agm-settings > $out/settings.log 2>&1 &
+    settings=$!
+    sleep 1.5
+    grim $out/settings.png
+    t9-send ${KEY_SHIFT} ${KEY_DOWN} ${KEY_ENTER}
+    sleep 0.5
+    grim $out/settings-display.png
+    t9-send ${KEY_SHIFT} ${KEY_BACK} ${KEY_BACK}
+    sleep 1
+    if kill -0 $settings 2>/dev/null; then
+      echo "agm-settings is still running after Back, Back"
       cat $out/*.log
       exit 1
     fi
