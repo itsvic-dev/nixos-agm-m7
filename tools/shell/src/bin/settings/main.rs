@@ -1,3 +1,4 @@
+mod audio;
 mod system;
 mod ui;
 mod wifi;
@@ -66,6 +67,7 @@ enum Page {
     Network(wifi::Network),
     Password { network: wifi::Network, text: String, preedit: String, show: bool },
     Display,
+    Sound,
     Battery,
     DateTime,
     Regions(Vec<String>),
@@ -110,6 +112,8 @@ struct App {
     stack: Vec<Frame>,
     wifi: wifi::Wifi,
     wifi_state: wifi::State,
+    audio: audio::State,
+    audio_switching: bool,
     config: Config,
     bus: Option<zbus::blocking::Connection>,
     message: Option<(String, Instant)>,
@@ -176,6 +180,7 @@ impl App {
             Page::Wifi => "Wi-Fi".into(),
             Page::Network(n) | Page::Password { network: n, .. } => n.name.clone(),
             Page::Display => "Display".into(),
+            Page::Sound => "Sound".into(),
             Page::Battery => "Battery".into(),
             Page::DateTime => "Date & time".into(),
             Page::Regions(_) => "Time zone".into(),
@@ -199,6 +204,14 @@ impl App {
                 } else {
                     w.networks.iter().find(|n| n.connected).map_or("Not connected".into(), |n| n.name.clone())
                 };
+                let a = &self.audio;
+                let sound = if !a.available {
+                    "Not available".to_string()
+                } else if a.muted {
+                    "Muted".into()
+                } else {
+                    format!("Volume {:.0}%", a.volume * 100.0)
+                };
                 let battery = system::battery().into_iter().take(2).map(|(_, v)| v).collect::<Vec<_>>().join(", ");
                 let storage = system::storage()
                     .first()
@@ -207,6 +220,7 @@ impl App {
                 vec![
                     Row::new("Wi-Fi", wifi, Kind::Link).icon("network-wireless-symbolic"),
                     Row::new("Display", format!("Brightness {:.0}%", brightness() * 100.0), Kind::Link).icon("display-brightness-symbolic"),
+                    Row::new("Sound", sound, Kind::Link).icon("audio-volume-high-symbolic"),
                     Row::new("Battery", battery, Kind::Link).icon(agm_shell::shell::battery_icon(&status)),
                     Row::new("Date & time", self.timezone(), Kind::Link).icon("preferences-system-time-symbolic"),
                     Row::new("Storage", storage, Kind::Link).icon("drive-harddisk-symbolic"),
@@ -259,6 +273,19 @@ impl App {
                     Row::new("Brightness", format!("{:.0}%", b * 100.0), Kind::Slider(b)),
                     Row::new("Dim after", seconds(dim), Kind::Info),
                     Row::new("Screen off and lock after", seconds(off), Kind::Info),
+                ]
+            }
+            Page::Sound => {
+                let a = &self.audio;
+                if !a.available {
+                    return vec![Row::new("Audio is not available", "", Kind::Info)];
+                }
+                let volume = if a.muted { "Muted".into() } else { format!("{:.0}%", a.volume * 100.0) };
+                vec![
+                    Row::new("Volume", volume, Kind::Slider(a.volume)),
+                    Row::new("Mute", "", Kind::Toggle(a.muted)),
+                    Row::new("Output", a.output_name(), Kind::Info),
+                    Row::new("Microphone", "", Kind::Toggle(!a.mic_muted)),
                 ]
             }
             Page::Battery => info(system::battery()),
@@ -396,9 +423,13 @@ impl App {
             Page::Root => match index {
                 0 => self.push(Page::Wifi),
                 1 => self.push(Page::Display),
-                2 => self.push(Page::Battery),
-                3 => self.push(Page::DateTime),
-                4 => self.push(Page::Storage),
+                2 => {
+                    self.audio = audio::State::load();
+                    self.push(Page::Sound);
+                }
+                3 => self.push(Page::Battery),
+                4 => self.push(Page::DateTime),
+                5 => self.push(Page::Storage),
                 _ => self.push(Page::About),
             },
             Page::Wifi => match index {
@@ -448,6 +479,7 @@ impl App {
                 _ => self.connect_password(),
             },
             Page::Display => self.adjust(index, 1),
+            Page::Sound => self.adjust_sound(index, 1),
             Page::DateTime => match index {
                 0 => {
                     let zones: Vec<String> = self
@@ -508,8 +540,52 @@ impl App {
         }
     }
 
+    fn adjust_sound(&mut self, index: usize, delta: i32) {
+        let a = &self.audio;
+        if !a.available {
+            return;
+        }
+        match index {
+            0 => a.set_volume(a.volume + 0.05 * delta as f32),
+            1 => a.set_muted(!a.muted),
+            2 if !a.outputs.is_empty() && !self.audio_switching => {
+                let n = a.outputs.len() as i32;
+                let next = (a.output.unwrap_or(0) as i32 + delta).rem_euclid(n) as usize;
+                a.set_output(next);
+                self.wait_for_output(next);
+                return;
+            }
+            3 => a.set_mic_muted(!a.mic_muted),
+            _ => return,
+        }
+        self.audio = audio::State::load();
+        self.draw();
+    }
+
+    /// Reloads the audio state until PipeWire has made the new output active.
+    fn wait_for_output(&mut self, output: usize) {
+        self.audio_switching = true;
+        let name = self.audio.outputs[output].name.clone();
+        self.say(format!("Switching to {name}…"));
+        let mut tries = 0;
+        self.handle
+            .insert_source(Timer::from_duration(Duration::from_millis(300)), move |_, _, app| {
+                tries += 1;
+                let state = audio::State::load();
+                if (state.available && state.output == Some(output)) || tries >= 17 {
+                    app.audio = state;
+                    app.audio_switching = false;
+                    app.draw();
+                    return TimeoutAction::Drop;
+                }
+                TimeoutAction::ToDuration(Duration::from_millis(300))
+            })
+            .unwrap();
+    }
+
     fn adjust(&mut self, index: usize, delta: i32) {
         match &self.top().page {
+            Page::Sound => return self.adjust_sound(index, delta),
             Page::Display => {}
             Page::Wifi if index == 0 => {
                 if (delta > 0) != self.wifi_state.powered {
@@ -673,12 +749,21 @@ fn main() {
         stack: vec![Frame { page: Page::Root, selected: 0, scroll: 0 }],
         wifi: wifi::Wifi::start(wifi_tx),
         wifi_state: wifi::State::default(),
+        audio: audio::State::default(),
+        audio_switching: false,
         config: Config::load(),
         bus: zbus::blocking::Connection::system().ok(),
         message: None,
     };
 
     let handle = event_loop.handle();
+    // pw-dump takes a moment, so load the audio state after the first frame.
+    handle.insert_idle(|app| {
+        app.audio = audio::State::load();
+        if matches!(app.top().page, Page::Root) {
+            app.draw();
+        }
+    });
     WaylandSource::new(conn, queue).insert(handle.clone()).unwrap();
     handle
         .insert_source(wifi_rx, |event, _, app| match event {

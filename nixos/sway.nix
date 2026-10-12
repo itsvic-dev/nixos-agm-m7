@@ -7,7 +7,11 @@
 
 let
   t9 = pkgs.callPackage ../tools/t9/package.nix { sway = config.programs.sway.package; };
-  shell = pkgs.callPackage ../tools/shell/package.nix { sway = config.programs.sway.package; };
+  shell = pkgs.callPackage ../tools/shell/package.nix {
+    sway = config.programs.sway.package;
+    pipewire = config.services.pipewire.package;
+    wireplumber = config.services.pipewire.wireplumber.package;
+  };
 
   bindings = ''
     bindsym XF86MenuKB exec ${shell}/bin/agm-menu --hide footclient.desktop --hide foot-server.desktop --name foot.desktop=Terminal

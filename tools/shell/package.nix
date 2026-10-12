@@ -11,6 +11,8 @@
   nixos-artwork,
   sway,
   foot,
+  pipewire,
+  wireplumber,
 }:
 
 let
@@ -52,6 +54,8 @@ rustPlatform.buildRustPackage {
   AGM_WALLPAPER = wallpaper;
   AGM_SWAYMSG = "${sway}/bin/swaymsg";
   AGM_TERMINAL = "${foot}/bin/foot";
+  AGM_WPCTL = "${wireplumber}/bin/wpctl";
+  AGM_PW_DUMP = "${pipewire}/bin/pw-dump";
 
   postInstall = ''
     install -Dm644 icons/agm-settings.svg $out/share/icons/hicolor/scalable/apps/agm-settings.svg
