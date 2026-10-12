@@ -40,6 +40,7 @@
           inherit (agm-m7.config.boot) kernelParams;
         };
         rootfs = agm-m7.config.system.build.rootfs;
+        agm-shell = pkgs.callPackage ./tools/shell/package.nix { };
       };
       checks.aarch64-linux.t9 = pkgs.callPackage ./tools/t9/test/wayland.nix {
         t9 = pkgs.callPackage ./tools/t9/package.nix { };

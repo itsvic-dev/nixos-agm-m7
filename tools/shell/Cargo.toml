@@ -1,0 +1,23 @@
+[package]
+name = "agm-shell"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "agm-home"
+path = "src/bin/home.rs"
+
+[[bin]]
+name = "agm-lock"
+path = "src/bin/lock.rs"
+
+[dependencies]
+ab_glyph = "0.2"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+smithay-client-toolkit = { version = "0.21", default-features = false, features = ["calloop", "xkbcommon"] }
+tiny-skia = { version = "0.12", default-features = false, features = ["std", "simd", "png-format"] }
+zbus = { version = "5", default-features = false, features = ["blocking-api", "async-io"] }
+
+[profile.release]
+lto = true
+strip = true
