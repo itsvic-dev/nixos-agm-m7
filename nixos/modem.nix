@@ -21,6 +21,20 @@ let
   '';
 in
 {
+  # Wi-Fi and mobile data are both up; strict checking drops replies on the non-default one.
+  networking.firewall.checkReversePath = "loose";
+
+  networking.modemmanager = {
+    enable = true;
+    package = pkgs.callPackage ../tools/mm-plugin-mtk-ccci/package.nix { };
+  };
+
+  # NixOS only D-Bus activates ModemManager; start it once the modem is up.
+  systemd.services.ModemManager = {
+    wantedBy = [ "multi-user.target" ];
+    after = [ "ccci-fsd.service" ];
+  };
+
   systemd.services.ccci-fsd = {
     description = "MT6739 modem NVRAM file service and modem start";
     wantedBy = [ "multi-user.target" ];
