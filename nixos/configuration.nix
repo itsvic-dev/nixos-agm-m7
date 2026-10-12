@@ -13,6 +13,7 @@
     ./firefox.nix
     ./gpu.nix
     ./settings.nix
+    ./audio.nix
   ];
 
   networking.hostName = "agm-m7";

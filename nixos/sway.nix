@@ -104,7 +104,6 @@ in
   xdg.portal.wlr.enable = lib.mkForce false;
   fonts.enableDefaultPackages = lib.mkForce false;
   services.speechd.enable = lib.mkForce false;
-  services.pipewire.enable = lib.mkForce false;
 
   services.udev.packages = [ pkgs.brightnessctl ];
 
