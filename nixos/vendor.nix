@@ -23,6 +23,8 @@ in
 {
   fileSystems."/vendor" = readOnly "vendor";
   fileSystems."/nvdata" = readOnly "nvdata";
+  fileSystems."/protect_f" = readOnly "protect1";
+  fileSystems."/protect_s" = readOnly "protect2";
 
   hardware.firmwareCompression = "none";
   hardware.firmware = [

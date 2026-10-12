@@ -10,6 +10,7 @@
     ./sway.nix
     ./vendor.nix
     ./wifi.nix
+    ./modem.nix
     ./firefox.nix
     ./gpu.nix
     ./settings.nix
