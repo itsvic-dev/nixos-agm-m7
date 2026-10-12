@@ -11,10 +11,21 @@ pub struct Wifi {
     pub bars: u8,
 }
 
+pub struct Mobile {
+    /// `None` until the modem is registered on a network.
+    pub bars: Option<u8>,
+    /// Short network generation, for example "4G", or empty.
+    pub tech: &'static str,
+    pub operator: String,
+    /// Mobile data is connected.
+    pub data: bool,
+}
+
 #[derive(Default)]
 pub struct Status {
     pub battery: Option<Battery>,
     pub wifi: Option<Wifi>,
+    pub mobile: Option<Mobile>,
 }
 
 impl Status {
@@ -22,8 +33,51 @@ impl Status {
         Status {
             battery: battery(),
             wifi: bus.and_then(|bus| wifi(bus).ok().flatten()),
+            mobile: bus.and_then(|bus| mobile(bus).ok().flatten()),
         }
     }
+}
+
+const MM: &str = "org.freedesktop.ModemManager1";
+const MM_MODEM: &str = "org.freedesktop.ModemManager1.Modem";
+const MM_STATE_REGISTERED: i32 = 8;
+const MM_STATE_CONNECTED: i32 = 11;
+
+/// The network generation for a ModemManager access technology bitmask.
+pub fn tech(access: u32) -> &'static str {
+    match access {
+        a if a & (1 << 15) != 0 => "5G",
+        a if a & (1 << 14) != 0 => "4G",
+        a if a & (1 << 9) != 0 => "H+",
+        a if a & (0x7 << 6) != 0 => "H",
+        a if a & (1 << 5) != 0 => "3G",
+        a if a & (1 << 4) != 0 => "E",
+        a if a & (1 << 3) != 0 => "G",
+        a if a & 0x6 != 0 => "2G",
+        _ => "",
+    }
+}
+
+fn mobile(bus: &Connection) -> zbus::Result<Option<Mobile>> {
+    let objects = ObjectManagerProxy::builder(bus).destination(MM)?.path("/org/freedesktop/ModemManager1")?.build()?.get_managed_objects()?;
+    let Some(ifaces) = objects.values().find(|i| i.contains_key(MM_MODEM)) else { return Ok(None) };
+    let modem = &ifaces[MM_MODEM];
+    let get = |key: &str| modem.get(key).and_then(|v| v.try_clone().ok());
+    let state = get("State").and_then(|v| i32::try_from(v).ok()).unwrap_or(0);
+    let (quality, _recent): (u32, bool) = get("SignalQuality").and_then(|v| v.try_into().ok()).unwrap_or((0, false));
+    let access = get("AccessTechnologies").and_then(|v| u32::try_from(v).ok()).unwrap_or(0);
+    let operator = ifaces
+        .get("org.freedesktop.ModemManager1.Modem.Modem3gpp")
+        .and_then(|m| m.get("OperatorName"))
+        .and_then(|v| String::try_from(v.try_clone().ok()?).ok())
+        .unwrap_or_default();
+    let registered = state >= MM_STATE_REGISTERED;
+    Ok(Some(Mobile {
+        bars: registered.then(|| bars_percent(quality.min(100) as u8)),
+        tech: if registered { tech(access) } else { "" },
+        operator,
+        data: state == MM_STATE_CONNECTED,
+    }))
 }
 
 pub fn battery() -> Option<Battery> {

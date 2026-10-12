@@ -29,6 +29,18 @@ pub fn wifi_icon(status: &Status) -> &'static str {
     }
 }
 
+pub fn mobile_icon(status: &Status) -> &'static str {
+    match status.mobile.as_ref().map(|m| m.bars) {
+        None => "network-cellular-offline-symbolic",
+        Some(None) => "network-cellular-acquiring-symbolic",
+        Some(Some(0)) => "network-cellular-signal-none-symbolic",
+        Some(Some(1)) => "network-cellular-signal-weak-symbolic",
+        Some(Some(2)) => "network-cellular-signal-ok-symbolic",
+        Some(Some(3)) => "network-cellular-signal-good-symbolic",
+        Some(Some(_)) => "network-cellular-signal-excellent-symbolic",
+    }
+}
+
 pub fn battery_icon(status: &Status) -> String {
     match &status.battery {
         None => "battery-missing-symbolic".into(),
@@ -62,13 +74,26 @@ impl Shell {
         now.format(if h24 { "%H:%M" } else { "%-I:%M" }).to_string()
     }
 
-    /// The black status bar: Wi-Fi on the left, the time in the middle, the battery on the right.
+    /// The black status bar: mobile and Wi-Fi on the left, the time in the middle, the battery on the right.
     pub fn status_bar(&mut self, pm: &mut Pixmap, status: &Status, now: DateTime<Local>) {
         let w = pm.width() as f32;
         fill(pm, rect(0.0, 0.0, w, BAR), BLACK, 255);
+        let mut x = 6.0;
+        if let Some(mobile) = &status.mobile {
+            let tint = if mobile.bars.is_some() { WHITE } else { DARK.subtext };
+            if let Some(icon) = self.icons.get(mobile_icon(status), 12, Some(tint)) {
+                image(pm, icon, x, 2.0);
+            }
+            x += 14.0;
+            if !mobile.tech.is_empty() {
+                let tint = if mobile.data { WHITE } else { DARK.subtext };
+                self.fonts.draw(pm, Weight::SemiBold, 10.5, x, 12.0, tint, mobile.tech);
+                x += self.fonts.width(Weight::SemiBold, 10.5, mobile.tech) + 5.0;
+            }
+        }
         let tint = if status.wifi.is_some() { WHITE } else { DARK.subtext };
         if let Some(icon) = self.icons.get(wifi_icon(status), 12, Some(tint)) {
-            image(pm, icon, 6.0, 2.0);
+            image(pm, icon, x, 2.0);
         }
         self.fonts.draw_centered(pm, Weight::SemiBold, 10.5, w / 2.0, 12.0, WHITE, &Self::time(now));
         let tint = match &status.battery {
@@ -97,15 +122,21 @@ impl Shell {
         self.fonts.draw_centered(pm, Weight::Regular, 12.0, w / 2.0, y + 72.0, DARK.subtext, &date);
 
         if !locked {
-            let (label, tint) = match &status.wifi {
-                Some(wifi) => (self.fonts.fit(Weight::Medium, 10.0, &wifi.name, 150.0), DARK.accent),
-                None => ("No Wi-Fi".to_string(), DARK.subtext),
+            let mobile = status.mobile.as_ref().filter(|m| m.bars.is_some() && !m.operator.is_empty());
+            let (label, tint, icon) = match (&status.wifi, mobile) {
+                (Some(wifi), _) => (self.fonts.fit(Weight::Medium, 10.0, &wifi.name, 150.0), DARK.accent, wifi_icon(status)),
+                (None, Some(m)) => {
+                    let name = format!("{} {}", m.operator, m.tech);
+                    let tint = if m.data { DARK.accent } else { DARK.subtext };
+                    (self.fonts.fit(Weight::Medium, 10.0, name.trim(), 150.0), tint, mobile_icon(status))
+                }
+                (None, None) => ("No Wi-Fi".to_string(), DARK.subtext, wifi_icon(status)),
             };
             let tw = self.fonts.width(Weight::Medium, 10.0, &label);
             let cw = tw + 30.0;
             let cx = ((w - cw) / 2.0).round();
             rounded(pm, rect(cx, y + 86.0, cw, 18.0), 9.0, WHITE, 20);
-            if let Some(icon) = self.icons.get(wifi_icon(status), 11, Some(tint)) {
+            if let Some(icon) = self.icons.get(icon, 11, Some(tint)) {
                 image(pm, icon, cx + 8.0, y + 89.5);
             }
             self.fonts.draw(pm, Weight::Medium, 10.0, cx + 22.0, y + 98.5, DARK.text, &label);
