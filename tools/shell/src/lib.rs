@@ -1,3 +1,4 @@
+pub mod config;
 pub mod status;
 pub mod wl;
 
@@ -52,8 +53,10 @@ impl Face {
         self.background(pm);
 
         let clock_y = (h * 0.30).round();
-        self.centered(pm, &self.clock, 68.0, clock_y, WHITE, &now.format("%H:%M").to_string());
-        self.centered(pm, &self.text, 14.0, clock_y + 24.0, WHITE, &now.format("%A, %-d %B").to_string());
+        let h24 = config::Config::load().get_bool(config::CLOCK_24H, true);
+        let (time, date) = if h24 { ("%H:%M", "%A, %-d %B") } else { ("%-I:%M", "%A, %-d %B, %p") };
+        self.centered(pm, &self.clock, 68.0, clock_y, WHITE, &now.format(time).to_string());
+        self.centered(pm, &self.text, 14.0, clock_y + 24.0, WHITE, &now.format(date).to_string());
         self.status_row(pm, clock_y + 46.0, status);
 
         if let Some(hint) = hint {
@@ -75,6 +78,15 @@ impl Face {
     pub fn label(&self, pm: &mut Pixmap, px: f32, cx: f32, base: f32, color: [u8; 3], s: &str) {
         let x = (cx - text_width(&self.text, px, s) / 2.0).round();
         self.text(pm, &self.text, px, x, base, color, s);
+    }
+
+    /// Draws `s` with the text font and a shadow, starting at `x`.
+    pub fn label_left(&self, pm: &mut Pixmap, px: f32, x: f32, base: f32, color: [u8; 3], s: &str) {
+        self.text(pm, &self.text, px, x, base, color, s);
+    }
+
+    pub fn width(&self, px: f32, s: &str) -> f32 {
+        text_width(&self.text, px, s)
     }
 
     pub fn fit(&self, px: f32, s: &str, max: f32) -> String {
