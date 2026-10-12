@@ -53,3 +53,6 @@ Nothing. Pick from the follow-ups.
 - T9: learn new words, number mode for number fields (`content_type`), keep `wvkbd` keys out of T9.
 - GPU: HWR recovery after a lockup, GLES 3 (needs transform feedback), hardware WebRender in Firefox, Sway on the GPU instead of pixman. See `GPU.md`.
 - SD card, Bluetooth, audio, vibrator.
+- Power: system suspend (s2idle or deep, wake on keys, charger and RTC), the deeper stock idle states (SODI, deep idle; need the SPM firmware), EEM adaptive CPU voltages.
+- Sway: find why the first `output * power on` after `power off` fails in wlroots, then drop the second call in the idle script.
+- The `mt6357-regulator` VSRAM mask fix is a real mainline bug and could go upstream on its own.
