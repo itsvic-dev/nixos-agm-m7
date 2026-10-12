@@ -6,12 +6,11 @@
 }:
 
 let
-  fuzzel = pkgs.fuzzel.override { svgBackend = "nanosvg"; };
   t9 = pkgs.callPackage ../tools/t9/package.nix { sway = config.programs.sway.package; };
-  shell = pkgs.callPackage ../tools/shell/package.nix { };
+  shell = pkgs.callPackage ../tools/shell/package.nix { sway = config.programs.sway.package; };
 
   bindings = ''
-    bindsym XF86MenuKB exec ${fuzzel}/bin/fuzzel
+    bindsym XF86MenuKB exec ${shell}/bin/agm-menu --hide footclient.desktop --hide foot-server.desktop
     bindsym XF86Send focus next
     bindsym XF86PowerOff kill
   '';
@@ -53,6 +52,11 @@ let
 
     ${bindings}
     bindsym XF86Back exec pkill -RTMIN wvkbd-mobintl
+
+    # agm-menu switches to this mode, so it gets all keys. Sway drops empty modes.
+    mode menu {
+      bindsym XF86Send nop
+    }
 
     # t9 switches to this mode while a text field has focus, so it gets the right soft key.
     mode text {
@@ -118,7 +122,6 @@ in
   environment.systemPackages = [
     pkgs.brightnessctl
     pkgs.foot
-    fuzzel
     pkgs.grim
     pkgs.wvkbd
   ];
@@ -127,13 +130,6 @@ in
 
   environment.etc."xdg/foot/foot.ini".text = ''
     font=DejaVu Sans Mono:size=6
-  '';
-
-  environment.etc."xdg/fuzzel/fuzzel.ini".text = ''
-    [main]
-    font=DejaVu Sans Mono:size=7
-    width=30
-    lines=12
   '';
 
   # The hang-up key is KEY_POWER; Sway uses it to close windows.

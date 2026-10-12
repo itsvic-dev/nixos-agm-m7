@@ -19,7 +19,7 @@ Findings are in `NOTES.md`. This file tracks what is done and what is next.
 - Battery: fuel gauge (current, coulomb counting, temperature), charger detection.
 - I2C0 and I2C1, touchscreen, HL7005 charger.
 - Flake builds the kernel (from GitHub) and `boot.img` parts. NixOS systemd initrd replaces the busybox initramfs.
-- Graphical session: Sway (pixman) with `foot`, `fuzzel` and Firefox. The `wvkbd` on-screen keyboard stays hidden until the right soft key shows it.
+- Graphical session: Sway (pixman) with `foot`, the `agm-menu` launcher and Firefox. The `wvkbd` on-screen keyboard stays hidden until the right soft key shows it.
 - Fast test loop: flash `recovery` from NixOS and `reboot recovery` through the RTC boot flag.
 - Wi-Fi: CONSYS bring-up and the vendor gen2 driver in staging, with iwd (see `WIFI.md`).
 - GPU: vendor DDK 1.9 firmware on the mainline `powervr` driver, Mesa Vulkan 1.2, and GL 2.1 / GLES 2.0 through Zink (see `GPU.md`).
