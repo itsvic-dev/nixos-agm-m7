@@ -30,7 +30,15 @@ Findings are in `NOTES.md`. This file tracks what is done and what is next.
 
 ## Next
 
-Nothing. Pick from the follow-ups.
+Modem (MD1, `MOLY_LR12A_R2_MP_V96_6`) as a data-only LTE modem:
+
+1. Boot our image from `boot` and LineageOS from `recovery`. LK loads and starts the modem only in normal boot; in recovery mode it turns the modem off.
+2. Spike driver: modem power-on and the CCIF handshake (first control message `0x5555FFFF`).
+3. Rust tool for the NVRAM file service (`ccci_fsd` protocol) on a copy of `nvdata`.
+4. CLDMA queues and an AT port (`AT+CPIN?`, `AT+COPS?`).
+5. Raw-IP network device (ccmni) and an LTE data session through AT commands.
+
+Reference: vendor `eccci` and `ccci_util` in `ref/lumi-mt6739`, mainline `t7xx` for the CLDMA and WWAN structure.
 
 ## Follow-ups
 
