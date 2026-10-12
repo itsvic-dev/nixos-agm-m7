@@ -19,8 +19,10 @@ Findings are in `NOTES.md`. This file tracks what is done and what is next.
 - Battery: fuel gauge (current, coulomb counting, temperature), charger detection.
 - I2C0 and I2C1, touchscreen, HL7005 charger.
 - Flake builds the kernel (from GitHub) and `boot.img` parts. NixOS systemd initrd replaces the busybox initramfs.
-- Graphical session: `labwc` with `foot` and the `wvkbd` on-screen keyboard.
+- Graphical session: Sway (pixman) with `foot`, `fuzzel` and Firefox. The `wvkbd` on-screen keyboard stays hidden until the right soft key shows it.
 - Fast test loop: flash `recovery` from NixOS and `reboot recovery` through the RTC boot flag.
+- Wi-Fi: CONSYS bring-up and the vendor gen2 driver in staging, with iwd (see `WIFI.md`).
+- GPU: vendor DDK 1.9 firmware on the mainline `powervr` driver, Mesa Vulkan 1.2, and GL 2.1 / GLES 2.0 through Zink (see `GPU.md`).
 
 ## Now
 
@@ -28,9 +30,7 @@ Nothing. Pick from the follow-ups.
 
 ## Next
 
-1. Wi-Fi: port the MediaTek gen2 driver (see `WIFI.md`).
-2. A phone-friendly UI for the D-pad and keypad, for example with Sway: the on-screen keyboard appears when you press a key, instead of always taking screen space.
-3. T9 input method for the keypad: multi-tap and predictive (T9) text entry as a Wayland input method (`input-method-unstable-v2`, which Sway supports), with word lists per language (English, Polish).
+1. T9 input method for the keypad: multi-tap and predictive (T9) text entry as a Wayland input method (`input-method-unstable-v2`, which Sway supports), with word lists per language (English, Polish).
 
 ## Follow-ups
 
@@ -46,9 +46,9 @@ Nothing. Pick from the follow-ups.
 - Remove `clk_ignore_unused` from the cmdline.
 - USB DMA (MUSB runs in PIO mode).
 - eMMC HS400: find the strobe delay register in the MSDC0 pad macro (0x11cd0000) and give `mtk-sd` an MT6739 entry for it. A failed HS400 tuning leaves the eMMC unusable, so test with care. HS200 already gives most of the speed.
-- NixOS: build the kernel and `boot.img` in the flake. Maybe use Mobile NixOS parts. Not for upstream.
 - NixOS: clean shutdown of the loop-mounted root.
 - `MEMCG` crashes in `__refill_obj_stock` when systemd loads BPF.
 - Display: backlight control (`disp_pwm0`), panel power and init without LK, TE or a vblank event, DBI frame-done IRQ instead of polling.
 - macOS sometimes does not create the USB network interface. A cable replug fixes it.
-- SD card, Wi-Fi, Bluetooth, audio, vibrator, GPU.
+- GPU: HWR recovery after a lockup, GLES 3 (needs transform feedback), hardware WebRender in Firefox, load `powervr` at boot, Sway on the GPU instead of pixman. See `GPU.md`.
+- SD card, Bluetooth, audio, vibrator.
