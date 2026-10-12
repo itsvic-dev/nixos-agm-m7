@@ -122,8 +122,8 @@ LK turns on the panel and the path OVL0 -> RDMA0 -> DBI0 (mutex 0). The panel ha
 
 ## Graphical session
 
-- `nixos/labwc.nix`: `labwc` as a systemd service on tty1 (`PAMName=login`, user `user`), `WLR_RENDERER=pixman`. Autostart: `wvkbd-mobintl -H 130` and `foot` (DejaVu Sans Mono, size 6). `wvkbd`'s `-L` is the landscape height; portrait uses `-H`.
-- `nixos/weston.nix` (not imported): Weston 15 kiosk shell with `foot`. Weston's desktop shell crashed (SIGSEGV in `weston_desktop_xdg_surface_destroy`) after a protocol error from `weston-terminal`. Weston's on-screen keyboard needs `text-input-v1` clients (only its demo apps) and does not fit 240 px.
+- labwc (replaced by Sway): a systemd service on tty1 (`PAMName=login`, user `user`), `WLR_RENDERER=pixman`. Autostart: `wvkbd-mobintl -H 130` and `foot` (DejaVu Sans Mono, size 6). `wvkbd`'s `-L` is the landscape height; portrait uses `-H`.
+- Weston (not used): Weston 15 kiosk shell with `foot`. Weston's desktop shell crashed (SIGSEGV in `weston_desktop_xdg_surface_destroy`) after a protocol error from `weston-terminal`. Weston's on-screen keyboard needs `text-input-v1` clients (only its demo apps) and does not fit 240 px.
 - Our DRM device has no vblank support, so the atomic helpers fake the flip-done events. Compositors work with that.
 - The kernel has no module support, so the NixOS `modprobe` activation snippet is disabled.
 
