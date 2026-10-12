@@ -1,6 +1,6 @@
 # AGM M7 roadmap
 
-Findings are in `NOTES.md`. This file tracks what is done and what is next.
+Findings are in `NOTES.md`. This file tracks what is done and what is left.
 
 ## Done
 
@@ -8,7 +8,7 @@ Findings are in `NOTES.md`. This file tracks what is done and what is next.
 - Restart through the `mtk_wdt` restart handler.
 - Clocks, pinctrl, GPIO, EINT.
 - USB gadget: serial shell and ECM networking.
-- eMMC, encrypted `userdata` (dm-crypt, f2fs).
+- eMMC (HS200). Access to the encrypted `userdata` (dm-crypt, f2fs), which NixOS no longer uses.
 - postmarketOS rootfs from a loop image on `/data`.
 - MT6357 PMIC: pwrap, regulators, RTC, auxadc.
 - Keypad matrix and PMIC power key.
@@ -21,35 +21,23 @@ Findings are in `NOTES.md`. This file tracks what is done and what is next.
 - Flake builds the kernel (from GitHub) and `boot.img` parts. NixOS systemd initrd replaces the busybox initramfs.
 - Graphical session: Sway (pixman) with `foot`, the `agm-menu` launcher and Firefox. The `wvkbd` on-screen keyboard stays hidden until the side key (F11) shows it.
 - Fast test loop: flash `boot` from NixOS and reboot.
-- Wi-Fi: CONSYS bring-up and the vendor gen2 driver in staging, with iwd (see `WIFI.md`).
+- Wi-Fi: CONSYS bring-up and the vendor gen2 driver in staging, with NetworkManager and iwd (see `WIFI.md`).
 - GPU: vendor DDK 1.9 firmware on the mainline `powervr` driver, Mesa Vulkan 1.2, and GL 2.1 / GLES 2.0 through Zink (see `GPU.md`).
-
-## Now
-
-- T9 input method (`tools/t9`): passes the headless Sway check, not yet tested on the phone.
-
-## Next
-
-Modem (MD1, `MOLY_LR12A_R2_MP_V96_6`) as a data-only LTE modem:
-
-1. Done: power-on, HS1, runtime data, RPC, HS2 (`mt6739-ccci`, debugfs `start`).
-2. Done: `tools/ccci-fsd` serves the NVRAM from a copy in `/var/lib/ccci-fs/data`.
-3. Done: WWAN AT port `/dev/wwan0at0`. SIM ready, 2G registration works.
-4. Done: CLDMA and the WWAN network device `wwan0`. LTE data works (bearer setup in `MODEM-RE.md` section 9).
-5. Done: `ccci-fsd.service` seeds `/var/lib/ccci-fs/data` from the read-only `nvdata`, `protect_f` and `protect_s` once, serves it, and starts the modem (`/sys/bus/platform/drivers/mt6739-ccci/*/state`).
-6. Done: NetworkManager with the iwd backend manages Wi-Fi; the settings app and the status bar use NetworkManager.
-7. Done: ModemManager plugin `mtk-ccci` (`tools/mm-plugin-mtk-ccci`). Mobile data is the NetworkManager connection `mobile` (APN `internet`, IPv4 only), metric 700 behind Wi-Fi. 57 Mbit/s down.
-8. Next: modem power-off and restart (driver and `state` attribute), so a crashed modem recovers without a phone reboot. ModemManager crashed the modem once (jump to 0) when it sent commands with the SIM still off.
-9. Done: the shell updates on NetworkManager, ModemManager and iwd events; mobile signal and network type in the status bar, carrier on the home screen, Settings > Mobile network (data, roaming, network type, APN).
-10. Then: IPv6 bearer, CCB control setup, sequence check and status polling.
-
-Reference: vendor `eccci` and `ccci_util` in `ref/lumi-mt6739`, mainline `t7xx` for the CLDMA and WWAN structure.
+- T9 input method (`tools/t9`) with English and Polish word lists.
+- Audio: own MT6739 AFE, `mt6357` codec, `aw8738` amplifier. Speaker, earpiece and main mic through PipeWire with a UCM profile.
+- Modem (MD1, `MOLY_LR12A_R2_MP_V96_6`) as a data-only LTE modem: `mt6739-ccci` (power-on, handshakes, RPC, CLDMA, WWAN AT port and `wwan0`), `ccci-fsd` NVRAM service, ModemManager plugin `mtk-ccci`, NetworkManager connection `mobile` (IPv4, 57 Mbit/s down). Status bar, home screen and Settings show the mobile network. Reference: vendor `eccci` and `ccci_util` in `ref/lumi-mt6739`, mainline `t7xx`.
+- microSD (UHS-I SDR104) as the NixOS root. `.#sd-image` with growing on the first boot (systemd-repart, `x-systemd.growfs`).
+- Bootloader module: each NixOS system builds its `boot.img`, and `switch-to-configuration` writes it to `boot`.
 
 ## Follow-ups
 
+- Modem: power-off and restart (driver and `state` attribute), so a crashed modem recovers without a phone reboot. ModemManager crashed the modem once (jump to 0) when it sent commands with the SIM still off.
+- Modem: IPv6 bearer, CCB control setup, sequence check and status polling.
+- microSD: test the install from `.#sd-image` on a fresh card.
+- microSD: there is no card detect line, so a card is found only at boot.
+- Delete the old root image `/data/nixos.img` on `userdata` (from LineageOS).
 - USB host mode: VBUS boost in the HL7005 driver (`OPA_MODE`) and role switching through the WUSB3801. Host mode removes USB serial and networking while in use.
 - Shrink the initrd (OpenSSL, libxml2, Kerberos and more are still in), so `boot.img` has more room in `boot`.
-- Drop the `userdata` encryption once updating and reflashing from NixOS is reliable. Reformatting `userdata` deletes the LineageOS data, so ask first.
 - Remove `regulator_ignore_unused` from the cmdline. First find which regulators must stay on.
 - RTC: Linux reads the date as 2069-12-31. Check the year mapping against the stock driver (base year 1968).
 - Offline charging: LK boots the `boot` partition (now NixOS) with the charger mode. Handle `androidboot.mode=charger` in NixOS (a small charging screen instead of the full session).
@@ -58,14 +46,13 @@ Reference: vendor `eccci` and `ccci_util` in `ref/lumi-mt6739`, mainline `t7xx` 
 - Remove `clk_ignore_unused` from the cmdline.
 - USB DMA (MUSB runs in PIO mode).
 - eMMC HS400: find the strobe delay register in the MSDC0 pad macro (0x11cd0000) and give `mtk-sd` an MT6739 entry for it. A failed HS400 tuning leaves the eMMC unusable, so test with care. HS200 already gives most of the speed.
-- NixOS: clean shutdown of the loop-mounted root.
 - Wi-Fi: CONSYS makes an EMI MPU write violation out of range at 0x40080400 at every boot (see `MODEM-RE.md` section 8).
 - `MEMCG` crashes in `__refill_obj_stock` when systemd loads BPF.
 - Display: panel power and init without LK, TE or a vblank event, DBI frame-done IRQ instead of polling.
 - macOS sometimes does not create the USB network interface. A cable replug fixes it.
 - T9: learn new words, number mode for number fields (`content_type`), keep `wvkbd` keys out of T9.
 - GPU: HWR recovery after a lockup, GLES 3 (needs transform feedback), hardware WebRender in Firefox, Sway on the GPU instead of pixman. See `GPU.md`.
-- SD card, Bluetooth, vibrator.
+- Bluetooth, vibrator.
 - Audio: after many fast manual profile switches, PipeWire once kept the old sink node while the device reported the other profile (no output route). A WirePlumber restart fixed it; find the cause if it comes back.
 - Audio: check that the DAC/ADC clock gates really turn off when the DAPM supplies power down after the AFE has suspended.
 - Power: system suspend (s2idle or deep, wake on keys, charger and RTC), the deeper stock idle states (SODI, deep idle; need the SPM firmware), EEM adaptive CPU voltages.
