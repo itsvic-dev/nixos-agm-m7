@@ -180,6 +180,7 @@ LK turns on the panel and the path OVL0 -> RDMA0 -> DBI0 (mutex 0). The panel ha
 - Earpiece: the MT6357 handset output. Step 10 of 18 (0 dB) is a normal level.
 - Main mic: AIN0 with MICBIAS0, `Mic Type Mux` = ACC. +24 dB gives about 11 % of full scale for speech. AIN1 and AIN2 give no signal. The phone has no headphone jack.
 - Playback route: `ADDA_DL_CH1 DL1_CH1`, `ADDA_DL_CH2 DL1_CH2`, then `Line Out Source` (speaker) or `Handset Source` (earpiece) = `Playback`. Capture: `PGA L/R Mux` = AIN0, `UL1_CH1 ADDA_UL_CH1`, `UL1_CH2 ADDA_UL_CH2`, PCM `hw:0,2`.
+- NixOS: PipeWire with WirePlumber and our UCM profile (`nixos/ucm2`, card driver `AGM_M7`): one sink with the Speaker and Earpiece routes, one Main Microphone source. `ALSA_CONFIG_UCM2` points to a merged copy of `alsa-ucm-conf`, because overriding that package rebuilds `alsa-lib` and everything that uses it. At the default 40 % volume the line out is at -10 dB and the rest is software volume. PipeWire and WirePlumber use about 18 MB RSS. WirePlumber needs a few seconds after login before the card shows up.
 
 ## Hardware status
 
