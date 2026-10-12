@@ -6,6 +6,7 @@
   dejavu_fonts,
   sway-unwrapped,
   grim,
+  foot,
   agm-shell,
 }:
 
@@ -29,6 +30,19 @@ let
   KEY_MENU = "139";
   KEY_1 = "2";
   KEY_STAR = "522";
+  KEY_RIGHT = "106";
+  KEY_BACK = "158";
+
+  # One entry without an icon, to show the letter tile.
+  apps = runCommand "agm-shell-test-apps" { } ''
+    mkdir -p $out/share/applications
+    cat > $out/share/applications/settings.desktop <<EOF
+    [Desktop Entry]
+    Type=Application
+    Name=Settings
+    Exec=true
+    EOF
+  '';
 in
 runCommand "agm-shell-test"
   {
@@ -75,4 +89,20 @@ runCommand "agm-shell-test"
     fi
     wait $lock
     grim $out/unlocked.png
+
+    export XDG_DATA_DIRS=${foot}/share:${apps}/share
+    ${agm-shell}/bin/agm-menu --hide footclient.desktop --hide foot-server.desktop > $out/menu.log 2>&1 &
+    menu=$!
+    sleep 1
+    grim $out/menu.png
+    t9-send ${KEY_1} ${KEY_RIGHT}
+    sleep 0.3
+    grim $out/menu-right.png
+    t9-send ${KEY_1} ${KEY_BACK}
+    sleep 1
+    if kill -0 $menu 2>/dev/null; then
+      echo "agm-menu is still running after Back"
+      cat $out/*.log
+      exit 1
+    fi
   ''
