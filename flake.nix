@@ -41,5 +41,8 @@
         };
         rootfs = agm-m7.config.system.build.rootfs;
       };
+      checks.aarch64-linux.t9 = pkgs.callPackage ./tools/t9/test/wayland.nix {
+        t9 = pkgs.callPackage ./tools/t9/package.nix { };
+      };
     };
 }
