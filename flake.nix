@@ -45,5 +45,8 @@
       checks.aarch64-linux.t9 = pkgs.callPackage ./tools/t9/test/wayland.nix {
         t9 = pkgs.callPackage ./tools/t9/package.nix { };
       };
+      checks.aarch64-linux.agm-shell = pkgs.callPackage ./tools/shell/test.nix {
+        agm-shell = pkgs.callPackage ./tools/shell/package.nix { };
+      };
     };
 }
