@@ -7,6 +7,7 @@
 #include <cairo.h>
 #include <errno.h>
 #include <linux/input-event-codes.h>
+#include <math.h>
 #include <pango/pangocairo.h>
 #include <poll.h>
 #include <signal.h>
@@ -32,7 +33,7 @@
 #define TAP_TIMEOUT_MS 1000
 #define MODE_SHOW_MS 1500
 #define POPUP_ROWS 5
-#define FONT "DejaVu Sans Mono 7"
+#define FONT "Inter Medium 8.5"
 
 extern char **environ;
 
@@ -135,6 +136,16 @@ static void draw_text(cairo_t *cr, PangoLayout *layout, const char *text, double
 	pango_cairo_show_layout(cr, layout);
 }
 
+static void rounded(cairo_t *c, double x, double y, double w, double h, double r)
+{
+	cairo_new_sub_path(c);
+	cairo_arc(c, x + w - r, y + r, r, -M_PI / 2, 0);
+	cairo_arc(c, x + w - r, y + h - r, r, 0, M_PI / 2);
+	cairo_arc(c, x + r, y + h - r, r, M_PI / 2, M_PI);
+	cairo_arc(c, x + r, y + r, r, M_PI, 3 * M_PI / 2);
+	cairo_close_path(c);
+}
+
 static void draw_popup(struct state *st)
 {
 	const struct t9 *t = &st->t9;
@@ -174,8 +185,9 @@ static void draw_popup(struct state *st)
 				width = w;
 		}
 	}
-	width += 8;
-	height = (rows + 1) * line_h + 4;
+	line_h += 4;
+	width += 16;
+	height = (rows + 1) * line_h + 6;
 	stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, width);
 
 	fd = memfd_create("t9-popup", MFD_CLOEXEC);
@@ -191,23 +203,27 @@ static void draw_popup(struct state *st)
 		cairo_t *c = cairo_create(surface);
 
 		pango_cairo_update_layout(c, layout);
-		cairo_set_source_rgb(c, 0x1e / 255.0, 0x1e / 255.0, 0x2e / 255.0);
+		cairo_set_operator(c, CAIRO_OPERATOR_CLEAR);
 		cairo_paint(c);
-		cairo_set_source_rgb(c, 0x89 / 255.0, 0xb4 / 255.0, 0xfa / 255.0);
+		cairo_set_operator(c, CAIRO_OPERATOR_OVER);
+		rounded(c, 0.5, 0.5, width - 1, height - 1, 7);
+		cairo_set_source_rgb(c, 1, 1, 1);
+		cairo_fill_preserve(c);
+		cairo_set_source_rgb(c, 0xd6 / 255.0, 0xd6 / 255.0, 0xdc / 255.0);
 		cairo_set_line_width(c, 1);
-		cairo_rectangle(c, 0.5, 0.5, width - 1, height - 1);
 		cairo_stroke(c);
 
-		draw_text(c, layout, header, 4, 2, 0x89b4fa);
+		draw_text(c, layout, header, 8, 4, 0x6b6b75);
 		for (int i = 0; i < rows; i++) {
-			int y = 2 + (i + 1) * line_h;
+			int y = 3 + (i + 1) * line_h;
+			bool selected = first + i == t->selected;
 
-			if (first + i == t->selected) {
-				cairo_set_source_rgb(c, 0x45 / 255.0, 0x47 / 255.0, 0x5a / 255.0);
-				cairo_rectangle(c, 1, y, width - 2, line_h);
+			if (selected) {
+				rounded(c, 3, y, width - 6, line_h, 5);
+				cairo_set_source_rgb(c, 0xe6 / 255.0, 0xef / 255.0, 1);
 				cairo_fill(c);
 			}
-			draw_text(c, layout, t->cand[first + i], 4, y, 0xcdd6f4);
+			draw_text(c, layout, t->cand[first + i], 8, y + 2, selected ? 0x2f6fec : 0x16161a);
 		}
 		cairo_destroy(c);
 		cairo_surface_flush(surface);

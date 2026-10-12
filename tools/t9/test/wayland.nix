@@ -4,6 +4,7 @@
   writeText,
   makeFontsConf,
   dejavu_fonts,
+  inter,
   sway-unwrapped,
   foot,
   grim,
@@ -23,7 +24,10 @@ let
     exec ${t9}/bin/t9
   '';
 
-  fonts = makeFontsConf { fontDirectories = [ dejavu_fonts ]; };
+  fonts = makeFontsConf { fontDirectories = [
+      dejavu_fonts
+      inter
+    ]; };
 
   KEY_ENTER = "28";
   KEY_UP = "103";

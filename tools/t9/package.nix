@@ -43,7 +43,7 @@ stdenv.mkDerivation {
       -DT9_DATADIR=\"$out/share/t9\" \
       -DSWAYMSG=\"${sway}/bin/swaymsg\" \
       -DPKILL=\"${procps}/bin/pkill\" \
-      $(pkg-config --cflags --libs wayland-client pangocairo)
+      $(pkg-config --cflags --libs wayland-client pangocairo) -lm
     $CC -O2 -Wall -o t9-test engine.c test.c
   '';
 
