@@ -12,7 +12,7 @@ Mainline Linux and NixOS on the AGM M7, a rugged keypad phone with a MediaTek MT
 |---|---|---|
 | CPU (4x A53), GIC, timer, PSCI | Y | |
 | Clocks, pinctrl, GPIO, EINT | Y | `clk_ignore_unused` on the cmdline |
-| eMMC | Y | HS200 (192 MHz). `userdata` is encrypted (dm-crypt), see below |
+| eMMC | Y | HS200 (192 MHz) |
 | USB device | Y | Serial shell and ECM networking. PIO only, no DMA |
 | Watchdog, restart | Y | Through `mtk_wdt`. PSCI reset and power off hang in the ATF |
 | Power off | Y | Through the PMIC. With USB connected, the phone starts offline charging |
@@ -23,7 +23,7 @@ Mainline Linux and NixOS on the AGM M7, a rugged keypad phone with a MediaTek MT
 | Charger | Partial | External HL7005 on I2C1 (`hl7005`): 4.20 V, input limit 500 mA, watchdog, 0 to 45 °C limit. No USB charger type detection, so always 500 mA input |
 | Touchscreen | Y | Telink TLSC6x at I2C0 0x38, works with `edt-ft5x06` (FT6x36 layout) |
 | I2C | Y | I2C0 (touch), I2C1 (charger). Other buses not added yet |
-| SD card | N | |
+| microSD | Y | UHS-I SDR104. No card detect line, so the card is found only at boot. Holds the NixOS root |
 | Wi-Fi | Partial | Vendor gen2 driver in staging, iwd. Starts at boot. Firmware and NVRAM from the phone's own partitions |
 | Bluetooth, GPS, FM | N | MT6739 connectivity (CONSYS) |
 | Modem | N | |
@@ -38,7 +38,7 @@ The bootloader (LK) cannot boot an image from USB here, so we use the `recovery`
 
 - A normal boot starts the stock system (LineageOS) from `boot`.
 - A boot into recovery (`adb reboot recovery` from LineageOS, or `systemctl reboot --reboot-argument=recovery` from NixOS) starts our kernel from `recovery`.
-- The NixOS systemd initrd unlocks `userdata`, mounts it at `/run/userdata`, loop-mounts `nixos.img` as root, and starts the current system profile (`init=/nix/var/nix/profiles/system/init`).
+- The NixOS systemd initrd mounts the microSD card (ext4, GPT partition label `nixos`) as root and starts the current system profile (`init=/nix/var/nix/profiles/system/init`). Without the card, it reboots into LineageOS.
 
 LineageOS stays usable. We use it for the first install, and to read the kernel log from pstore after a crash.
 
@@ -51,25 +51,17 @@ LineageOS stays usable. We use it for the first install, and to read the kernel 
 
 ## Build and install
 
-1. Dump the `userdata` key once. Build `tools/dmtable.c` as a static armhf binary, run it as root on LineageOS, and save its output as `secrets/userdata-dm-table.txt`. Never commit this file.
+1. Put a NixOS root on a microSD card: GPT, one ext4 partition with the partition label `nixos`. There is no script for a fresh card yet. `docs/NOTES.md` describes how the current card was copied from the old root image.
 
-2. Build the NixOS image and copy it to the phone (with LineageOS running):
-
-   ```
-   ./scripts/nixos-push.sh
-   ```
-
-   This writes `/data/nixos.img` (4 GB).
-
-3. Build `boot.img`:
+2. Build `boot.img`:
 
    ```
    ./scripts/mkboot-nix.sh
    ```
 
-   Nix builds the kernel, the DTB and the initrd. The script appends the `userdata` key as a second cpio archive, so the key never enters the Nix store, and writes `out/boot.img`.
+   Nix builds the kernel, the DTB and the initrd, and the script writes `out/boot.img`.
 
-4. Flash it to `recovery` and boot it, from LineageOS:
+3. Flash it to `recovery` and boot it, from LineageOS:
 
    ```
    ./scripts/test-recovery.sh <log name>
@@ -108,7 +100,7 @@ From a running NixOS, LineageOS is not needed:
 - `linux/`: kernel tree (separate repo). Board DT: `arch/arm64/boot/dts/mediatek/mt6739-agm-m7.dts`. Config fragment: `arch/arm64/configs/agm-m7.config`.
 - `flake.nix`: builds the kernel, the `boot.img` parts, the NixOS system and the root image.
 - `nixos/`: NixOS modules. `patches/` has the Mesa patches for the GE8100.
-- `pkgs/`: package expressions for the kernel, the `boot.img` parts and `dmctl`.
+- `pkgs/`: package expressions for the kernel and the `boot.img` parts.
 - `scripts/`: build, flash, deploy and test helpers. `scripts/re/` has LK and boot.img analysis helpers.
 - `tools/`: device-mapper helpers, GPU firmware analysis scripts, Vulkan and PowerVR test programs, the `t9` input method, and the home screen and keyguard (`shell`, Rust).
 - `stock/`: decompiled stock DT and ODM DTBO.

@@ -52,7 +52,7 @@ PSCI `SYSTEM_RESET` and `SYSTEM_OFF` both hang in the ATF. The watchdog is stopp
 `userdata` (`mmcblk0p33`) has full-disk encryption: dm-crypt `aes-cbc-essiv:sha256` with a 128-bit key, f2fs inside.
 
 - `tools/dmtable.c` (static armhf, run as root on LineageOS) prints the dm table with the key. Keep it in `secrets/userdata-dm-table.txt`. Never commit it.
-- `scripts/mkboot-nix.sh` appends the table to the initrd. `dmctl create userdata rw "$(cat /etc/userdata.table)"` creates `/dev/dm-0`.
+- `tools/dmctl.c` creates the mapping from that table without libdevmapper. NixOS used it to unlock `userdata` in the initrd until the root moved to the microSD card. NixOS does not touch `userdata` now.
 - Android runs `fsck.f2fs` on the raw encrypted partition at every boot, and it always fails with "Magic Mismatch". That is normal.
 
 ## postmarketOS
@@ -66,18 +66,18 @@ PSCI `SYSTEM_RESET` and `SYSTEM_OFF` both hang in the ATF. The watchdog is stopp
 ## NixOS
 
 - `flake.nix` builds NixOS 26.05 for aarch64 on the Rosetta builder. The kernel and the initramfs still come from `boot.img` (`boot.kernel.enable = false`, `boot.initrd.enable = false`).
-- `scripts/nixos-push.sh` builds the root image, grows it to 4 GB on the Mac (Android's `truncate` and `resize2fs` cannot), and copies it to `/data/nixos.img`.
-- To grow the running root: `fallocate -l <size> /mnt/data/nixos.img`, `losetup -c /dev/loop0`, then the `EXT4_IOC_RESIZE_FS` ioctl on `/` (`resize2fs` cannot open the busy loop device). A full root makes the phone's auto-GC delete paths during `nix copy`, which shows up as "path ... is not valid".
+- Root is the whole microSD card: GPT, one ext4 partition with the partition label `nixos`. The initrd waits 15 s for it. Without the card, the initrd fails and reboots into LineageOS.
+- Migration from `/data/nixos.img`: `sfdisk` and `mkfs.ext4` on the card, `nixos-deploy.sh boot` with the new initrd, then `cp -ax / <card>` with `nix-daemon` stopped (3.3 GB in 3.5 min), then flash `boot.img`. The old image is still on `userdata`.
+- A full root makes the phone's auto-GC delete paths during `nix copy`, which shows up as "path ... is not valid".
 - `scripts/nixos-deploy.sh [boot|switch]` copies a new system closure over SSH and sets the system profile. `/sbin/init` in the image points to that profile, so `boot` takes effect at the next boot.
 - `ssh root@172.16.42.1`. `ttyGS0` has a root autologin. systemd-networkd gives the Mac 172.16.42.2 over DHCP.
 - The kernel needs `NETDEVICES` (else `SO_BINDTODEVICE` fails and networkd, resolved and sshd break) and nftables. `MEMCG` crashes the kernel when systemd loads BPF programs, so it stays off.
-- At shutdown, systemd cannot unmount `/mnt/data`, because the root image is on it.
 
 ## PMIC
 
 - The pwrap registers are the same as on MT6765, but the preloader also enables the INT1 interrupt group. The mainline MT6765 entry ignores INT1, and the pwrap interrupt then storms until the watchdog fires. The MT6739 entry turns INT1 off.
 - eMMC: Samsung eMMC 5.1 (`FN62BB`), HS200/HS400 at 1.8 V. The I/O voltage is fixed at 1.8 V, so no `vqmmc` is needed. Stock runs HS400 at 200 MHz. We run HS200 (192 MHz from `msdcpll`, about 156 MB/s raw, 120 to 140 MB/s through dm-crypt and the loop image; plain high-speed mode gave 44 MB/s). HS400 with `mt6779` registers fails: the strobe delay scan in `PAD_DS_TUNE` (base + 0x188) finds no working value, and the card is then not initialised at all. Stock maps a second block, the MSDC0 pad macro at 0x11cd0000, which probably holds the strobe delay.
-- microSD: MSDC1, `vmch` (3.3 V) as `vmmc`, `vmc` as `vqmmc` (switches to 1.8 V for UHS-I). There is no card detect line. The stock `cd-gpios` is GPIO15, but GPIO15 is keypad column 7, and the stock overlay sets `non-removable`. We do the same, so the kernel scans the slot once at boot. A 32 GB SDHC card runs SDR104 at 192 MHz: about 79 MB/s raw read, 22 MB/s in high-speed mode.
+- microSD: MSDC1, `vmch` (3.3 V) as `vmmc`, `vmc` as `vqmmc` (switches to 1.8 V for UHS-I). There is no card detect line. The stock `cd-gpios` is GPIO15, but GPIO15 is keypad column 7, and the stock overlay sets `non-removable`. We do the same, so the kernel scans the slot once at boot. A 32 GB SDHC card (the NixOS root) runs SDR104 at 192 MHz: about 79 MB/s raw read, 22 MB/s in high-speed mode.
 - The PMIC interrupt is EINT 182 (virtual pin 168), level high.
 - The pwrap reset is infracfg `0x140` bit 0.
 - Long-press reset: the mainline keys driver turns it off unless the DT sets it. We keep the stock setting: one key, `power-off-time-sec = <0>`. MT6357 has the MT6331 layout of `TOP_RST_MISC` (0x14c): time bits 13:12, power-key reset enable bit 9, home-key bit 8. Stock value 0x221.
@@ -171,7 +171,8 @@ LK turns on the panel and the path OVL0 -> RDMA0 -> DBI0 (mutex 0). The panel ha
 - LK puts `root=/dev/ram` on the kernel command line. Our part of the command line comes later and has `root=fstab`, which wins. Without a bootloader, NixOS's `boot.kernelParams` only reach the kernel through `boot.img`, so `boot-parts` writes them into `cmdline`.
 - `init=/nix/var/nix/profiles/system/init`: the initrd resolves the symlink inside the new root, so `nixos-deploy.sh boot` is enough for userspace changes.
 - Store paths in initrd unit scripts are not copied into the initrd. Use `boot.initrd.systemd.extraBin` (`dmctl` failed with status 127).
-- A device-mapper device created without libdevmapper's udev handshake gets `SYSTEMD_READY=0` (on `add` events always). systemd then stops everything that depends on it. `99-zz-userdata.rules` sets it ready.
+- A device-mapper device created without libdevmapper's udev handshake gets `SYSTEMD_READY=0` (on `add` events always). systemd then stops everything that depends on it. The old `userdata` setup needed a udev rule that set it ready.
+- `emergency.service` writes the failed units and the journal to the kernel log (pstore), then runs `systemctl reboot -ff --reboot-argument=recovery`, so a failed boot ends in LineageOS and not in a boot loop.
 - The initrd is 81 MB unpacked. With xz and without TPM2, FIDO2 and LVM it is 17 MB, and `boot.img` 22.4 MB. `boot` and `recovery` hold 24 MiB each.
 - NixOS sets `loglevel=4`, which hides most messages from the pstore console. We use `boot.consoleLogLevel = 8`.
 - Debug: `systemd.log_target=kmsg systemd.journald.forward_to_kmsg=1` on the command line puts the whole initrd log into pstore. `systemd.debug_shell=ttyGS0` did not give a shell on the USB serial port.
@@ -220,7 +221,7 @@ LK turns on the panel and the path OVL0 -> RDMA0 -> DBI0 (mutex 0). The panel ha
 | Battery voltage, percent | works (`adc-battery` with the stock OCV table) |
 | Charger detection, fuel gauge | works (`mt6357-charger`) |
 | Charging | works (`hl7005`, external charger on I2C1) |
-| Userspace | NixOS 26.05 from `/data/nixos.img`, `labwc` session |
+| Userspace | NixOS 26.05, root on the microSD card |
 | Audio (speaker, earpiece, main mic) | works (own MT6739 AFE, `mt6357`, `aw8738`) |
-| microSD | works, SDR104, scanned only at boot |
+| microSD | works, SDR104, scanned only at boot, NixOS root |
 | Wi-Fi, BT, modem, camera, GPU | not done |
