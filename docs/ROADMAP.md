@@ -40,7 +40,8 @@ Modem (MD1, `MOLY_LR12A_R2_MP_V96_6`) as a data-only LTE modem:
 6. Done: NetworkManager with the iwd backend manages Wi-Fi; the settings app and the status bar use NetworkManager.
 7. Done: ModemManager plugin `mtk-ccci` (`tools/mm-plugin-mtk-ccci`). Mobile data is the NetworkManager connection `mobile` (APN `internet`, IPv4 only), metric 700 behind Wi-Fi. 57 Mbit/s down.
 8. Next: modem power-off and restart (driver and `state` attribute), so a crashed modem recovers without a phone reboot. ModemManager crashed the modem once (jump to 0) when it sent commands with the SIM still off.
-9. Then: mobile data toggle and signal in Settings and the status bar, IPv6 bearer, CCB control setup, sequence check and status polling.
+9. Done: the shell updates on NetworkManager, ModemManager and iwd events; mobile signal and network type in the status bar, carrier on the home screen, Settings > Mobile network (data, roaming, network type, APN).
+10. Then: IPv6 bearer, CCB control setup, sequence check and status polling.
 
 Reference: vendor `eccci` and `ccci_util` in `ref/lumi-mt6739`, mainline `t7xx` for the CLDMA and WWAN structure.
 
