@@ -8,6 +8,10 @@ name = "agm-home"
 path = "src/bin/home.rs"
 
 [[bin]]
+name = "agm-bar"
+path = "src/bin/bar.rs"
+
+[[bin]]
 name = "agm-menu"
 path = "src/bin/menu.rs"
 
