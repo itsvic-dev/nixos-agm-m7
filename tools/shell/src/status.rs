@@ -66,7 +66,7 @@ fn wifi(bus: &Connection) -> zbus::Result<Option<Wifi>> {
     Ok(None)
 }
 
-fn bars(rssi: i16) -> u8 {
+pub fn bars(rssi: i16) -> u8 {
     match rssi {
         r if r >= -6000 => 4,
         r if r >= -6700 => 3,
