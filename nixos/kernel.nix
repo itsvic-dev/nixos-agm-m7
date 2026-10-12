@@ -1,9 +1,4 @@
-{
-  lib,
-  pkgs,
-  kernel,
-  ...
-}:
+{ pkgs, kernel, ... }:
 
 {
   boot.kernelPackages = pkgs.linuxPackagesFor kernel;
@@ -22,6 +17,4 @@
 
   boot.loader.grub.enable = false;
   boot.loader.initScript.enable = false;
-  # Built-in drivers only, so /proc/sys/kernel/modprobe does not exist.
-  system.activationScripts.modprobe = lib.mkForce "";
 }
