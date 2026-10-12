@@ -1,7 +1,19 @@
-{ lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   fuzzel = pkgs.fuzzel.override { svgBackend = "nanosvg"; };
+  t9 = pkgs.callPackage ../tools/t9/package.nix { sway = config.programs.sway.package; };
+
+  bindings = ''
+    bindsym XF86MenuKB exec ${fuzzel}/bin/fuzzel
+    bindsym XF86Send focus next
+    bindsym XF86PowerOff kill
+  '';
 
   status = pkgs.writeShellScript "sway-status" ''
     while :; do
@@ -17,10 +29,13 @@ let
     workspace_layout tabbed
     focus_follows_mouse no
 
+    ${bindings}
     bindsym XF86Back exec pkill -RTMIN wvkbd-mobintl
-    bindsym XF86MenuKB exec ${fuzzel}/bin/fuzzel
-    bindsym XF86Send focus next
-    bindsym XF86PowerOff kill
+
+    # t9 switches to this mode while a text field has focus, so it gets the right soft key.
+    mode text {
+      ${bindings}
+    }
 
     bar {
       position top
@@ -31,6 +46,7 @@ let
 
     exec ${pkgs.wvkbd}/bin/wvkbd-mobintl --hidden -H 130
     exec ${pkgs.foot}/bin/foot
+    exec ${t9}/bin/t9
   '';
 in
 {
