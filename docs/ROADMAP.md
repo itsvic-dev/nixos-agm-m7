@@ -32,10 +32,11 @@ Findings are in `NOTES.md`. This file tracks what is done and what is next.
 
 Modem (MD1, `MOLY_LR12A_R2_MP_V96_6`) as a data-only LTE modem:
 
-1. Spike driver: modem power-on and the CCIF handshake. Done to the runtime data: HS1 and the runtime-data answer work (`mt6739-ccci`, debugfs `start`). Next: an RPC port (the MD asks op 0x4005 before HS2), then HS2.
-2. Rust tool for the NVRAM file service (`ccci_fsd` protocol) on a copy of `nvdata`.
-3. CLDMA queues and an AT port (`AT+CPIN?`, `AT+COPS?`).
-4. Raw-IP network device (ccmni) and an LTE data session through AT commands.
+1. Done: power-on, HS1, runtime data, RPC, HS2 (`mt6739-ccci`, debugfs `start`).
+2. Done: `tools/ccci-fsd` serves the NVRAM from a copy in `/var/lib/ccci-fs/data`.
+3. Done: WWAN AT port `/dev/wwan0at0`. SIM ready, 2G registration works.
+4. Now: CLDMA and a raw-IP network device. The LTE attach makes the MD assert while the AP CLDMA does not run.
+5. Then: NixOS services (fsd, modem start at boot), CCB control setup, modem power-off and restart.
 
 Reference: vendor `eccci` and `ccci_util` in `ref/lumi-mt6739`, mainline `t7xx` for the CLDMA and WWAN structure.
 
