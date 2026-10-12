@@ -94,7 +94,7 @@ From a running NixOS, LineageOS is not needed:
 - The keyguard (`agm-lock`): Menu then `*` unlocks. Menu then `*` also locks from anywhere.
 - Brightness: `brightnessctl set 50%`.
 - Power: cpuidle (core and cluster power-down) and cpufreq (299 to 1274 MHz, `schedutil`).
-- Keys in Sway: the left soft key opens the app menu (`agm-menu`: D-pad and OK, or 1 to 9; Back closes it), the right soft key shows or hides the `wvkbd` on-screen keyboard, the call key moves the focus to the next window, and the hang-up key closes the window.
+- Keys in Sway: the left soft key opens the app menu (`agm-menu`: D-pad and OK, or 1 to 9; Back closes it), the side key (F11) shows or hides the `wvkbd` on-screen keyboard, the right soft key goes to the app as Back, the call key moves the focus to the next window, and the hang-up key closes the window.
 - Text input (`t9`) in a text field:
   - 2 to 9 type a word. `*` (or the D-pad up and down) selects the next word. A long press types the digit.
   - 0 types a space. 1 types punctuation, and 1 again selects the next mark.

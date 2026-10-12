@@ -149,7 +149,7 @@ LK turns on the panel and the path OVL0 -> RDMA0 -> DBI0 (mutex 0). The panel ha
 ## T9 input method
 
 - `tools/t9`: an `input-method-unstable-v2` client. It grabs the keyboard while a text field has focus, and sends the keys that it does not use back through `virtual-keyboard-unstable-v1`. `foot` and Firefox support `text-input-v3`.
-- Sway runs its key bindings before the input method grab. So `t9` switches Sway to a `text` mode without the `XF86Back` binding while a text field has focus, and back to `default` after.
+- Sway runs its key bindings before the input method grab. `t9` switches Sway to a `text` mode while a text field has focus, and back to `default` after. Back is no longer bound in either mode (the OSK moved to F11), so `text` is now the same as `default`.
 - The grab first sends a `no_keymap` keymap (format 0, size 0). wlroots answers a virtual keyboard keymap with size 0 with a `no_memory` error, which kills the client.
 - Sway forwards only the keys of the input method's own virtual keyboard past the grab. Keys from `wvkbd` also go through `t9`, so its digit keys type T9 letters.
 - Word lists: FrequencyWords (OpenSubtitles 2018, 50k words, CC-BY-SA 4.0). The English list splits contractions ("don" + "'t"), so `en-extra.txt` adds them.

@@ -53,7 +53,7 @@ impl Home {
     fn draw(&mut self) {
         let (w, h) = self.size;
         let Some(mut pm) = Pixmap::new(w, h) else { return };
-        let keys = SoftKeys { left: "Menu", right: "OSK" };
+        let keys = SoftKeys { left: "Menu", right: "" };
         self.face.draw(&mut pm, Local::now(), &self.status, &keys, None);
         present(&mut self.pool, self.layer.wl_surface(), &pm);
     }

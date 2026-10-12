@@ -12,6 +12,7 @@ let
   bindings = ''
     bindsym XF86MenuKB exec ${shell}/bin/agm-menu --hide footclient.desktop --hide foot-server.desktop
     bindsym XF86Send focus next
+    bindsym F11 exec pkill -RTMIN wvkbd-mobintl
     bindsym XF86PowerOff kill
   '';
 
@@ -51,7 +52,6 @@ let
     focus_follows_mouse no
 
     ${bindings}
-    bindsym XF86Back exec pkill -RTMIN wvkbd-mobintl
 
     # agm-menu switches to this mode, so it gets all keys. Sway drops empty modes.
     mode menu {
