@@ -46,7 +46,7 @@ AT+CGCONTRDP
 - `<a>` is the Android authtype: 0 none, 1 PAP, 2 CHAP, 3 PAP or CHAP. If the auth type is not set, the plugin uses 2 when a user or password is set, else 0.
 - `<aid>` comes from `+CGEV: ME PDN ACT <aid>` or `+EPDN: <aid>, "new", ...`. If neither comes, the plugin finds the `+CGCONTRDP` entry whose APN starts with `<apn>`.
 - `<ifid>` and the IPv4 address come from `+EIF: <ifid>, ifup, 1, <ipv4>, 0` or `+EPDN: <aid>, "new", 1, <ifid>, <mtu>, <iptype>, "<ipv4>"`. The plugin waits up to 10 s for them after `+EAPNACT`.
-- The ccmni index is `<ifid> % 100`. Only ccmni0 (`wwan0`) is supported. Other indexes fail the connection.
+- The ccmni index is `<ifid> % 100`. The modem picks it, and it changes when old PDNs are still open. The kernel learns it from RPC 0x400d and maps it to `wwan0`.
 - The modem answers `+EPDN` only after the `+EIF` confirmation. The stock netagent sends `+EIF` on a second AT channel; with one channel, `+EIF` must come first.
 - The `+EAPNSET` steps and `+EPDN` are not fatal. Adding an APN that is already in the table fails with `CME ERROR: 5841`.
 - `+CGCONTRDP` gives DNS and MTU.

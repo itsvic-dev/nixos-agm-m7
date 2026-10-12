@@ -23,7 +23,7 @@
 #define INTERFACE_WAIT_PERIOD_MSECS 250
 #define INTERFACE_WAIT_MAX_TICKS    40
 
-/* ccmni<n> has interface id 100 * m + n; only ccmni0 (wwan0) is exposed */
+/* ccmni<n> has interface id 100 * m + n; the kernel maps it to wwan0 */
 #define IFID_TO_CCMNI(ifid) ((ifid) % 100)
 
 /* Android authtype values used by +EAPNSET */
@@ -649,12 +649,6 @@ connect_step (GTask *task)
             }
             connect_fail (task, g_error_new (MM_CORE_ERROR, MM_CORE_ERROR_FAILED,
                                              "modem did not report the interface of PDN %d", ctx->aid));
-            return;
-        }
-        if (IFID_TO_CCMNI (ctx->ifid) != 0) {
-            connect_fail (task, g_error_new (MM_CORE_ERROR, MM_CORE_ERROR_UNSUPPORTED,
-                                             "PDN %d uses ccmni%d, but only ccmni0 is supported",
-                                             ctx->aid, IFID_TO_CCMNI (ctx->ifid)));
             return;
         }
         mm_obj_dbg (self, "PDN %d uses interface %d (ccmni%d), address %s",
