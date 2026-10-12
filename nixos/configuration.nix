@@ -15,7 +15,6 @@
     ./gpu.nix
     ./settings.nix
     ./audio.nix
-    ./sdcard.nix
   ];
 
   networking.hostName = "agm-m7";
