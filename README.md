@@ -56,10 +56,10 @@ LineageOS stays usable. We use it for the first install, and to read the kernel 
 2. Build `boot.img`:
 
    ```
-   ./scripts/mkboot-nix.sh
+   nix build .#boot-img -o out/boot.img
    ```
 
-   Nix builds the kernel, the DTB and the initrd, and the script writes `out/boot.img`.
+   Nix builds the kernel, the DTB, the initrd and `boot.img`. Each NixOS system also links its `boot.img` as `/run/current-system/boot.img`.
 
 3. Flash it to `recovery` and boot it, from LineageOS:
 
@@ -73,8 +73,8 @@ LineageOS stays usable. We use it for the first install, and to read the kernel 
 
 From a running NixOS, LineageOS is not needed:
 
-- NixOS only: `./scripts/nixos-deploy.sh switch` (now) or `boot` (at the next boot).
-- Kernel or initrd: commit and push the kernel, `nix flake update linux`, `./scripts/nixos-deploy.sh boot`, `./scripts/mkboot-nix.sh`, then `./scripts/nixos-flash.sh`. It writes `out/boot.img` to `recovery` and reboots into it (about 50 s).
+- `./scripts/nixos-deploy.sh switch` (now) or `boot` (at the next boot). Both run `switch-to-configuration`, and the bootloader module (`nixos/bootloader.nix`) writes the system's `boot.img` to the `boot` partition if it changed. So kernel and initrd changes need only a reboot after the deploy.
+- Kernel changes: commit and push the kernel, `nix flake update linux`, then deploy.
 - Fast kernel development: `./scripts/config.sh` and `./scripts/build.sh` in the VM build `Image.gz` and the DTB incrementally from `linux/`. `KERNEL=vm ./scripts/mkboot-nix.sh` then packs them with the NixOS initrd, and `./scripts/nixos-flash.sh` flashes the result.
 
 ## Use

@@ -69,7 +69,8 @@ PSCI `SYSTEM_RESET` and `SYSTEM_OFF` both hang in the ATF. The watchdog is stopp
 - Root is the whole microSD card: GPT, one ext4 partition with the partition label `nixos`. The initrd waits 15 s for it. Without the card, the initrd fails and reboots into LineageOS.
 - Migration from `/data/nixos.img`: `sfdisk` and `mkfs.ext4` on the card, `nixos-deploy.sh boot` with the new initrd, then `cp -ax / <card>` with `nix-daemon` stopped (3.3 GB in 3.5 min), then flash `boot.img`. The old image is still on `userdata`.
 - A full root makes the phone's auto-GC delete paths during `nix copy`, which shows up as "path ... is not valid".
-- `scripts/nixos-deploy.sh [boot|switch]` copies a new system closure over SSH and sets the system profile. `/sbin/init` in the image points to that profile, so `boot` takes effect at the next boot.
+- `scripts/nixos-deploy.sh [boot|switch]` copies a new system closure over SSH, sets the system profile and runs `switch-to-configuration`. `/sbin/init` on the root points to that profile, so `boot` takes effect at the next boot.
+- Bootloader module (`nixos/bootloader.nix`, `boot.loader.agm-m7`): `system.build.bootImage` packs the kernel, DTB, initrd and cmdline, and the toplevel links it as `boot.img`. `installBootLoader` compares it with the `boot` partition and writes it only if it differs. There is one `boot.img` and LK has no menu, so older generations cannot be picked at boot. To roll back, run the older generation's `switch-to-configuration boot`, which writes its `boot.img` too.
 - `ssh root@172.16.42.1`. `ttyGS0` has a root autologin. systemd-networkd gives the Mac 172.16.42.2 over DHCP.
 - The kernel needs `NETDEVICES` (else `SO_BINDTODEVICE` fails and networkd, resolved and sshd break) and nftables. `MEMCG` crashes the kernel when systemd loads BPF programs, so it stays off.
 
@@ -168,7 +169,7 @@ LK turns on the panel and the path OVL0 -> RDMA0 -> DBI0 (mutex 0). The panel ha
 
 ## systemd initrd
 
-- LK puts `root=/dev/ram` on the kernel command line. Our part of the command line comes later and has `root=fstab`, which wins. Without a bootloader, NixOS's `boot.kernelParams` only reach the kernel through `boot.img`, so `boot-parts` writes them into `cmdline`.
+- LK puts `root=/dev/ram` on the kernel command line. Our part of the command line comes later and has `root=fstab`, which wins. NixOS's `boot.kernelParams` only reach the kernel through `boot.img`, so `boot-parts` writes them into `cmdline`.
 - `init=/nix/var/nix/profiles/system/init`: the initrd resolves the symlink inside the new root, so `nixos-deploy.sh boot` is enough for userspace changes.
 - Store paths in initrd unit scripts are not copied into the initrd. Use `boot.initrd.systemd.extraBin` (`dmctl` failed with status 127).
 - A device-mapper device created without libdevmapper's udev handshake gets `SYSTEMD_READY=0` (on `add` events always). systemd then stops everything that depends on it. The old `userdata` setup needed a udev rule that set it ready.
