@@ -1,9 +1,9 @@
 diff --git a/src/imagination/common/device_info/ge8100.h b/src/imagination/common/device_info/ge8100.h
 new file mode 100644
-index 0000000..f0a43c3
+index 0000000..3f7bb90
 --- /dev/null
 +++ b/src/imagination/common/device_info/ge8100.h
-@@ -0,0 +1,107 @@
+@@ -0,0 +1,106 @@
 +/*
 + * SPDX-License-Identifier: MIT
 + */
@@ -49,7 +49,6 @@ index 0000000..f0a43c3
 +   .has_unified_store_depth = true,
 +   .has_usc_f16sop_u8 = true,
 +   .has_usc_itrsmp = true,
-+   .has_usc_itrsmp_enhanced = true,
 +   .has_usc_itr_parallel_instances = true,
 +   .has_usc_min_output_registers_per_pix = true,
 +   .has_usc_slots = true,
