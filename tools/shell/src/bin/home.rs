@@ -2,7 +2,7 @@ use std::io::Read;
 use std::process::Command;
 use std::time::{Duration, Instant};
 
-use agm_shell::{Face, SoftKeys, status::Status, wl::present};
+use agm_shell::{Face, SoftKeys, pids, status::Status, wl::present};
 use chrono::{Local, Timelike};
 use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState},
@@ -156,15 +156,13 @@ fn watch_keys(tx: channel::Sender<u16>) {
 }
 
 fn locked() -> bool {
-    std::fs::read_dir("/proc").into_iter().flatten().flatten().any(|p| {
-        let Ok(stat) = std::fs::read_to_string(p.path().join("stat")) else { return false };
-        let Some((name, rest)) = stat.split_once(") ") else { return false };
-        name.ends_with("(agm-lock") && !rest.starts_with('Z')
-    })
+    !pids("agm-lock").is_empty()
 }
 
 fn lock() {
-    let _ = Command::new("pkill").args(["-x", "fuzzel"]).status();
+    for pid in pids("agm-menu") {
+        let _ = Command::new("kill").arg(pid.to_string()).status();
+    }
     let exe = std::env::current_exe().unwrap().with_file_name("agm-lock");
     if let Ok(mut child) = Command::new(exe).spawn() {
         std::thread::spawn(move || child.wait());

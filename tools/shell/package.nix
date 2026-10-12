@@ -7,6 +7,8 @@
   libxkbcommon,
   dejavu_fonts,
   nixos-artwork,
+  sway,
+  foot,
 }:
 
 let
@@ -35,4 +37,6 @@ rustPlatform.buildRustPackage {
   AGM_CLOCK_FONT = "${fonts}/DejaVuSans-ExtraLight.ttf";
   AGM_TEXT_FONT = "${fonts}/DejaVuSans.ttf";
   AGM_WALLPAPER = wallpaper;
+  AGM_SWAYMSG = "${sway}/bin/swaymsg";
+  AGM_TERMINAL = "${foot}/bin/foot";
 }

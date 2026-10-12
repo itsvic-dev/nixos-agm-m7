@@ -8,11 +8,16 @@ name = "agm-home"
 path = "src/bin/home.rs"
 
 [[bin]]
+name = "agm-menu"
+path = "src/bin/menu.rs"
+
+[[bin]]
 name = "agm-lock"
 path = "src/bin/lock.rs"
 
 [dependencies]
 ab_glyph = "0.2"
+calloop = { version = "0.14", features = ["signals"] }
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 smithay-client-toolkit = { version = "0.21", default-features = false, features = ["calloop", "xkbcommon"] }
 tiny-skia = { version = "0.12", default-features = false, features = ["std", "simd", "png-format"] }
