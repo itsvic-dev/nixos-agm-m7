@@ -113,8 +113,24 @@ github.com/LgPWNd/Alcatel_mt6739_5059R_and_5041C_universal_kernel-4.4.95-,
 - The firmware detects the first TA kick from the HWRT state, not from the first-kick flag. All TE, PPP and ISP merge values in the HWRT go to registers unchanged. The firmware register use for TA, 3D and PM setup is in `docs/GPU-render-map.md`.
 - Mesa needs `max_partitions`, `usc_min_output_registers_per_pix` and `common_store_size_in_dwords` from the kernel. Without them it enables no USC partitions and the 3D job hangs (HWR on DM 3).
 - Simple parameter format 1: Mesa and mainline only handled the 2x2 tile groups of format 2. Both now use one macrotile over the whole render.
-- Status: the TA and 3D jobs run without HWR, and the clear and the triangle land at the right pixels. Open: only the top-left (width/2 x height/2) of the image is rendered. The ISP macrotile size, `ISP_RGN`, the TE screen, the ISP pipe count, the PBE size and the TPC size do not change this. The PBE clip works (a 15x15 clip gives 16x16 pixels).
-- Open: compute `imageStore`/`imageLoad` agree with each other but write outside the image. Mesa does the twiddle in the shader (`usclib_twiddle2d`).
+- `tools/vk-triangle` modes: `DEPTH=1|2|3` (D16 clear 1.0, D16 clear 0.0, D32), `UBO=1` and `Z=` (positions from a uniform buffer), `TEX=1|2` (texture from a render pass or a buffer copy), `VARY=1`, `DERIV=1`, `PROBE=n` (pieces of the vkcube fragment shader), `TILE=x,y` (draw into one tile) and `PAUSE=s`. Every mode also passes on MoltenVK as a reference.
+- Region headers on this core: 5 bytes per 16x16 tile. First byte: 0x01 empty, 0x10 has a control stream, 0x04 last header (the ISP stops there). Bytes 1-2: control stream offset in 32-byte units.
+- Fixes found on the way:
+  - The terminate PPP state clips the render in 16-pixel units on the GE8100, not in 32-pixel blocks as `ppp.xml` says. With 32, only the top-left quarter was drawn.
+  - The ISP compares depth as floats: the D16 background depth must be a float, not UNORM16.
+  - The GE8100 has no `usc_itrsmp_enhanced` (DITR). With it, interpolated varyings were garbage.
+  - The firmware's one-time dummy region header init writes 5 KiB; it now goes to the INIA scratch buffer.
+  - Transfer jobs are translated; `ISP_PIXEL_BASE` is the transfer heap base (0).
+- Display: Sway renders with pixman, so Vulkan presents through `wl_shm` from a linear image (`MESA_VK_WSI_DEBUG=sw,linear`, set system-wide).
+- vkcube runs: `modprobe powervr`, then `vkcube --wsi wayland` in the Sway session. No HWR.
+
+![vkcube on the GE8100](img/vkcube.png)
+
+- Screenshots: `scripts/screenshot.sh [file]`.
+- Open:
+  - Compute `imageStore`/`imageLoad` agree with each other but write outside the image (`usclib_twiddle2d`).
+  - Device features copied from the GE8300 and not verified: the vendor uses `max_partitions` 6 and `isp_max_tiles_in_flight` 2 (we have 10 and 4). USC store sizes and TPU and UVS values are unknown; `libusc.so` in `/vendor/lib` may have them.
+  - HWR recovery: after a 3D lockup the kernel does not answer the free list reconstruction request, so later jobs time out.
 
 ## Plan
 
