@@ -18,6 +18,9 @@
   fileSystems."/" = {
     device = "/dev/disk/by-partlabel/nixos";
     fsType = "ext4";
-    options = [ "x-systemd.device-timeout=15s" ];
+    options = [
+      "x-systemd.device-timeout=15s"
+      "x-systemd.growfs"
+    ];
   };
 }

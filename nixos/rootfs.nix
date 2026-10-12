@@ -32,6 +32,10 @@ in
     dd if=$root of=$out bs=1M seek=1 conv=notrunc status=none
   '';
 
+  # On the first boot, grow the root partition and its ext4 to the whole card.
+  systemd.repart.enable = true;
+  systemd.repart.partitions."10-root".Type = "root";
+
   systemd.services.nix-register-rootfs = {
     wantedBy = [ "multi-user.target" ];
     before = [
