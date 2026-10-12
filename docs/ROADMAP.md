@@ -52,7 +52,8 @@ Nothing. Pick from the follow-ups.
 - macOS sometimes does not create the USB network interface. A cable replug fixes it.
 - T9: learn new words, number mode for number fields (`content_type`), keep `wvkbd` keys out of T9.
 - GPU: HWR recovery after a lockup, GLES 3 (needs transform feedback), hardware WebRender in Firefox, Sway on the GPU instead of pixman. See `GPU.md`.
-- SD card, Bluetooth, audio, vibrator.
+- SD card, Bluetooth, vibrator.
+- Audio: UCM and PipeWire in NixOS with safe default volumes. Check that the DAC/ADC clock gates really turn off when the DAPM supplies power down after the AFE has suspended.
 - Power: system suspend (s2idle or deep, wake on keys, charger and RTC), the deeper stock idle states (SODI, deep idle; need the SPM firmware), EEM adaptive CPU voltages.
 - Sway: find why the first `output * power on` after `power off` fails in wlroots, then drop the second call in the idle script.
 - The `mt6357-regulator` VSRAM mask fix is a real mainline bug and could go upstream on its own.

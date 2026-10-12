@@ -171,6 +171,16 @@ LK turns on the panel and the path OVL0 -> RDMA0 -> DBI0 (mutex 0). The panel ha
 - NixOS sets `loglevel=4`, which hides most messages from the pstore console. We use `boot.consoleLogLevel = 8`.
 - Debug: `systemd.log_target=kmsg systemd.journald.forward_to_kmsg=1` on the command line puts the whole initrd log into pstore. `systemd.debug_shell=ttyGS0` did not give a shell on the USB serial port.
 
+## Audio
+
+- The MT6739 AFE (0x11220000, SPI 153) is a subset of the MT8183 AFE: all 280 registers that both have use the same offsets and bits. Our driver keeps DL1, DL2, VUL (`UL1`) and AWB (`UL2`) and the ADDA link. MT6739 has no audio power domain and only APLL1; ADDA runs from clk26m and needs no APLL.
+- The AUDIOSYS clock gates (AUDIO_TOP_CON0/1) are in the AFE registers and share its regmap. The AFE must leave cache-only mode before it turns its clocks on, else the gate writes are dropped.
+- Codec: the MT6357 (mainline `mt6357`, `vaud28`). Link: MTKAIF protocol 1 over GPIO 62-65 (MOSI) and 66-69 (MISO), mode 1.
+- Speaker: MT6357 line out into an external amplifier. GPIO 24 sets it on with 3 pulses (`awinic,aw8738`, mode 3, like the vendor `Ext_Speaker_Amp_Change`). It is loud: line out step 8 of 18 was too loud for a test.
+- Earpiece: the MT6357 handset output. Step 10 of 18 (0 dB) is a normal level.
+- Main mic: AIN0 with MICBIAS0, `Mic Type Mux` = ACC. +24 dB gives about 11 % of full scale for speech. AIN1 and AIN2 give no signal. The phone has no headphone jack.
+- Playback route: `ADDA_DL_CH1 DL1_CH1`, `ADDA_DL_CH2 DL1_CH2`, then `Line Out Source` (speaker) or `Handset Source` (earpiece) = `Playback`. Capture: `PGA L/R Mux` = AIN0, `UL1_CH1 ADDA_UL_CH1`, `UL1_CH2 ADDA_UL_CH2`, PCM `hw:0,2`.
+
 ## Hardware status
 
 | Part | Status |
@@ -191,4 +201,5 @@ LK turns on the panel and the path OVL0 -> RDMA0 -> DBI0 (mutex 0). The panel ha
 | Charger detection, fuel gauge | works (`mt6357-charger`) |
 | Charging | works (`hl7005`, external charger on I2C1) |
 | Userspace | NixOS 26.05 from `/data/nixos.img`, `labwc` session |
-| SD card, Wi-Fi, BT, modem, audio, camera, GPU | not done |
+| Audio (speaker, earpiece, main mic) | works (own MT6739 AFE, `mt6357`, `aw8738`) |
+| SD card, Wi-Fi, BT, modem, camera, GPU | not done |
