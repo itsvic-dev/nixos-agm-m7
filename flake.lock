@@ -6,14 +6,14 @@
         "lastModified": 1791837746,
         "narHash": "sha256-+TD/sHGI3BQZzVfvBPzQU5mHHrt3oAhgU3H/S5Tu3O8=",
         "owner": "itsvic-dev",
-        "repo": "linux-mt6739-agm-m7",
+        "repo": "linux-mt6739",
         "rev": "6b5663ba483ec535d58ebf6736b04861395c81a7",
         "type": "github"
       },
       "original": {
         "owner": "itsvic-dev",
-        "ref": "agm-m7",
-        "repo": "linux-mt6739-agm-m7",
+        "ref": "linux-7.2",
+        "repo": "linux-mt6739",
         "type": "github"
       }
     },

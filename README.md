@@ -2,7 +2,7 @@
 
 Mainline Linux and NixOS on the AGM M7, a rugged keypad phone with a MediaTek MT6739 SoC.
 
-- Kernel: [linux-mt6739-agm-m7](https://github.com/itsvic-dev/linux-mt6739-agm-m7), branch `agm-m7`, based on Linux 7.2.9.
+- Kernel: [linux-mt6739](https://github.com/itsvic-dev/linux-mt6739), branch `linux-7.2` (based on Linux 7.2.9).
 - NixOS system: `flake.nix` and `nixos/`.
 - Hardware findings: [docs/NOTES.md](docs/NOTES.md). Plan and open items: [docs/ROADMAP.md](docs/ROADMAP.md).
 

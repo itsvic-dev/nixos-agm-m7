@@ -4,7 +4,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
     linux = {
-      url = "github:itsvic-dev/linux-mt6739-agm-m7/agm-m7";
+      url = "github:itsvic-dev/linux-mt6739/linux-7.2";
       flake = false;
     };
   };
