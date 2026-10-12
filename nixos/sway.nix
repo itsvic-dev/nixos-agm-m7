@@ -55,6 +55,7 @@ in
   environment.systemPackages = [
     pkgs.foot
     fuzzel
+    pkgs.grim
     pkgs.wvkbd
   ];
 
