@@ -10,8 +10,8 @@ let
   shell = pkgs.callPackage ../tools/shell/package.nix { sway = config.programs.sway.package; };
 
   bindings = ''
-    bindsym XF86MenuKB exec ${shell}/bin/agm-menu --hide footclient.desktop --hide foot-server.desktop
-    bindsym XF86Send focus next
+    bindsym XF86MenuKB exec ${shell}/bin/agm-menu --hide footclient.desktop --hide foot-server.desktop --name foot.desktop=Terminal
+    bindsym XF86Send workspace next_on_output
     bindsym F11 exec pkill -RTMIN wvkbd-mobintl
     bindsym XF86PowerOff kill
   '';
@@ -51,18 +51,11 @@ let
     done
   '';
 
-  status = pkgs.writeShellScript "sway-status" ''
-    while :; do
-      echo "$(cat /sys/class/power_supply/battery/capacity)%  $(date +%H:%M)"
-      sleep 30
-    done
-  '';
-
   swayConfig = pkgs.writeText "sway-config" ''
-    font pango:DejaVu Sans Mono 7
-    output * bg #1e1e2e solid_color
-    default_border pixel 1
-    workspace_layout tabbed
+    font pango:Inter 8
+    output * bg #121214 solid_color
+    default_border none
+    default_floating_border none
     focus_follows_mouse no
 
     ${bindings}
@@ -77,16 +70,12 @@ let
       ${bindings}
     }
 
-    bar {
-      position top
-      height 14
-      font pango:DejaVu Sans Mono 7
-      status_command ${status}
-    }
-
+    exec ${shell}/bin/agm-bar
+    exec ${shell}/bin/agm-windows
     exec ${shell}/bin/agm-home
     exec ${idle}
-    exec ${pkgs.wvkbd}/bin/wvkbd-mobintl --hidden -H 130
+    exec ${pkgs.wvkbd}/bin/wvkbd-mobintl --hidden -H 130 -R 4 --fn "Inter Medium 9" \
+      --bg e9e9ee --fg ffffff --fg-sp d6d6dc --press e6efff --press-sp c9dcff --text 16161a --text-sp 16161a
     exec ${t9}/bin/t9
   '';
 in
@@ -140,7 +129,10 @@ in
     pkgs.wvkbd
   ];
 
-  fonts.packages = [ pkgs.dejavu_fonts ];
+  fonts.packages = [
+    pkgs.dejavu_fonts
+    pkgs.inter
+  ];
 
   environment.etc."xdg/foot/foot.ini".text = ''
     font=DejaVu Sans Mono:size=6
