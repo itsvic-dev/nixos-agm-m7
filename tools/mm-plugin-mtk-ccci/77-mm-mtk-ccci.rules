@@ -1,0 +1,8 @@
+# MT6739 integrated modem (mt6739-ccci): AT port wwan0at0 and raw-IP net device wwan0
+
+ACTION!="add|change|move|bind", GOTO="mm_mtk_ccci_end"
+
+SUBSYSTEM=="wwan", ATTR{type}=="AT", DRIVERS=="mt6739-ccci", ENV{ID_MM_PORT_TYPE_AT_PRIMARY}="1", ENV{ID_MM_PHYSDEV_UID}="mt6739-modem"
+SUBSYSTEM=="net", DRIVERS=="mt6739-ccci", ENV{ID_MM_PHYSDEV_UID}="mt6739-modem"
+
+LABEL="mm_mtk_ccci_end"
