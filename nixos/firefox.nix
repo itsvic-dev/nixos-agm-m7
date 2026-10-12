@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ lib, pkgs, ... }:
 
 let
   # Changing only passthru keeps the cached Firefox build and drops the media stack from the wrapper.
@@ -30,6 +30,20 @@ let
     #main-window, #browser, #tabbrowser-tabbox, browser { min-width: 0 !important; min-height: 0 !important; }
   '';
 
+  # From postmarketOS mobile-config-firefox: add "Mobile;" so that sites send mobile pages, and fall back for sites that break with it.
+  version = "${lib.versions.major unwrapped.version}.0";
+  uaMobile = "Mozilla/5.0 (X11; Linux x86_64; Mobile; rv:${version}) Gecko/20100101 Firefox/${version}";
+  uaDesktop = "Mozilla/5.0 (X11; Linux x86_64; rv:${version}) Gecko/20100101 Firefox/${version}";
+  uaAndroid = "Mozilla/5.0 (Android 16; Mobile; rv:${version}) Gecko/${version} Firefox/${version}";
+  uaRules = [
+    [ "^https?://accounts[.]google[.]com($|/)" uaDesktop ]
+    [ "^https?://(www[.])?google[.]com/maps($|/)" uaDesktop ]
+    [ "^https?://maps[.]google[.]com($|/)" uaDesktop ]
+    [ "^https?://(www[.])?google[.]com($|/)" uaAndroid ]
+    [ "^https?://accounts[.]firefox[.]com($|/)" uaDesktop ]
+    [ "^https?://addons[.]mozilla[.]org($|/)" uaDesktop ]
+  ];
+
   firefox = pkgs.wrapFirefox unwrapped {
     extraPrefs = ''
       pref("layout.css.devPixelsPerPx", "0.6");
@@ -55,6 +69,7 @@ let
       pref("network.prefetch-next", false);
       pref("network.predictor.enabled", false);
       pref("browser.startup.preXulSkeletonUI", false);
+      pref("general.useragent.override", ${builtins.toJSON uaMobile});
 
       try {
         const sss = Components.classes["@mozilla.org/content/style-sheet-service;1"]
@@ -63,6 +78,21 @@ let
           .getService(Components.interfaces.nsIIOService);
         sss.loadAndRegisterSheet(io.newURI("data:text/css," + encodeURIComponent(${builtins.toJSON chrome})),
           sss.USER_SHEET);
+      } catch (e) {
+        Components.utils.reportError(e);
+      }
+
+      try {
+        const uaRules = ${builtins.toJSON uaRules}.map(([re, ua]) => [new RegExp(re), ua]);
+        Components.classes["@mozilla.org/observer-service;1"]
+          .getService(Components.interfaces.nsIObserverService)
+          .addObserver({
+            observe(subject) {
+              const channel = subject.QueryInterface(Components.interfaces.nsIHttpChannel);
+              const rule = uaRules.find(([re]) => re.test(channel.URI.spec));
+              if (rule) channel.setRequestHeader("User-Agent", rule[1], false);
+            },
+          }, "http-on-modify-request");
       } catch (e) {
         Components.utils.reportError(e);
       }
