@@ -325,3 +325,16 @@ modem@10014000 {
 - The board has no 32 kHz crystal: MT6357 RTC spare register 0x5b8 bit 6 is 0 (stock log: `rtc_spare_reg[12] = {5b8, 1, 6}`), so feature 6 (RTC_32K_LESS) must be offered as supported.
 - `AT+CGATT=1` finds an LTE cell (`+EIRAT`, `+CEREG: 4,...,7`), then `CME ERROR: 100`. The MD raises channel 20 (peer wakeup) every 2 ms for 3.5 s and asserts in `errc_chm_main.c:8554` (params 0, 1, 0). All CCIF rings are drained at that time. Suspect: the AP CLDMA (network HIF) is not running.
 - Exception info: `EX_OVERVIEW` at smem 0x800 (core names from 0x808, 12 bytes each), assert file at 0x870 (256 bytes), line and 3 params at 0x970.
+
+## 9. LTE data (2026-10-12)
+- With the AP CLDMA running (`CLDMA.md`), `AT+CGATT=1` attaches on LTE (`+COPS: 0,0,"<operator>",7`) and the MD does not assert. No ch 20 storm.
+- Bearer setup, as the stock 6293 RIL does it (captured from LineageOS `logcat -b radio`, copy in `backup/partswap-2026-10-12/los-radio-boot.log`):
+  1. `AT+EIFCONFIG=3`, `AT+EIAREG=1`, `AT+EDALLOW=1`
+  2. `AT+EAPNSET="internet",1,"internet","internet"` and `AT+EAPNSET="internet",2,"type=default,supl,hipri;protocol=IP;roaming_protocol=IP;authtype=2;carrier_enabled=1;max_conns=0;max_conns_time=0;wait_time=0;bearer_bitmask=2147352575;inactive_timer=0"`
+  3. `AT+EIAAPN="internet",0` (initial attach APN)
+  4. `AT+EAPNACT=1,"internet","default",0` gives `+EIF: 100, ifup, 1, <ipv4>, 0`, `+EIF: 100, mtu, 1500`, `+CGEV: ME PDN ACT 0`
+  5. `AT+EPDN=0,"ifst",20` gives `+EPDN: 0, "new", 1, 100, 1500, 1, "<ipv4>"`
+  6. `AT+EIF=100,"ifst","up",1` (the stock netagent confirms the interface; 1 = IPv4, 2 = IPv6)
+- Interface id = 100 * n + ccmni index (100 ccmni0, 201 ccmni1, 302 ccmni2). The MD then sends RPC 0x400d `{net_if 0, lhif_q 2}`.
+- Without steps 1 to 3, `AT+EAPNACT` and `AT+CGACT` fail (`CME ERROR: 5745`, `5873`, `5841`). Before step 6 the MD takes uplink packets but sends no downlink.
+- Result: `ip addr add <ipv4>/32 dev wwan0`, ping 1.1.1.1 about 25 ms, 20 MB download at 4.6 MB/s (37 Mbit/s), no CLDMA errors.
