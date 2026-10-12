@@ -89,18 +89,23 @@ From a running NixOS, LineageOS is not needed:
 
 - SSH: `ssh root@172.16.42.1`. The phone gives the host 172.16.42.2 over DHCP.
 - Serial: `/dev/cu.usbmodem*` (macOS) or `/dev/ttyACM*` (Linux), with root autologin.
-- The screen runs `labwc` (wlroots, pixman renderer) as `user`, with the `foot` terminal and the `wvkbd` on-screen keyboard. The keypad and the touchscreen both work.
+- The screen runs Sway (pixman renderer) as `user`, with the `foot` terminal and Firefox. The keypad and the touchscreen both work.
+- Keys in Sway: the left soft key opens the `fuzzel` launcher, the right soft key shows or hides the `wvkbd` on-screen keyboard, the call key moves the focus to the next window, and the hang-up key closes the window.
 - `systemctl reboot` goes back to LineageOS. `systemctl reboot --reboot-argument=recovery` boots NixOS again.
 - If the initrd fails, it writes the failed units to the kernel log and reboots into LineageOS. `test-recovery.sh` or `cat /sys/fs/pstore/console-ramoops` then shows the log.
 
 ## Layout
 
 - `linux/`: kernel tree (separate repo). Board DT: `arch/arm64/boot/dts/mediatek/mt6739-agm-m7.dts`. Config fragment: `arch/arm64/configs/agm-m7.config`.
-- `flake.nix`, `nixos/`: kernel, initrd, `boot.img` parts, NixOS configuration and root image.
+- `flake.nix`: builds the kernel, the `boot.img` parts, the NixOS system and the root image.
+- `nixos/`: NixOS modules. `patches/` has the Mesa patches for the GE8100.
+- `pkgs/`: package expressions for the kernel, the `boot.img` parts and `dmctl`.
 - `scripts/`: build, flash, deploy and test helpers. `scripts/re/` has LK and boot.img analysis helpers.
-- `tools/`: small device-mapper helpers.
+- `tools/`: device-mapper helpers, GPU firmware analysis scripts, and Vulkan and PowerVR test programs.
 - `stock/`: decompiled stock DT and ODM DTBO.
 
 ## Planned
 
-- Touchscreen, Weston, backlight. See `docs/ROADMAP.md`.
+- Display backlight control.
+- T9 text input for the keypad.
+- More in `docs/ROADMAP.md`.
