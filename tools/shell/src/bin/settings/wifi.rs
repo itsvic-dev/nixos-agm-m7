@@ -77,8 +77,11 @@ fn run(rx: mpsc::Receiver<Cmd>, events: Sender<Event>) {
         }
     };
 
-    let mut state = State::default();
+    let mut state = read_state(&bus).unwrap_or_default();
     let mut scan_until = Instant::now();
+    if handle(&bus, &state, Cmd::Scan, &events).is_ok() {
+        scan_until = Instant::now() + Duration::from_secs(5);
+    }
     loop {
         match rx.recv_timeout(Duration::from_secs(3)) {
             Ok(cmd) => {
@@ -267,6 +270,12 @@ fn read_state(bus: &Connection) -> zbus::Result<State> {
             known: known.get(&ssid).cloned(),
             connected: active_ssid.as_ref() == Some(&ssid),
             path,
+        };
+        let network = if network.connected {
+            let bars = agm_shell::status::connected_rssi(bus).map_or(network.bars, agm_shell::status::bars);
+            Network { bars, ..network }
+        } else {
+            network
         };
         best.insert(ssid, (strength, network));
     }
