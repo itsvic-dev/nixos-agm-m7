@@ -15,6 +15,8 @@ const DIM: [u8; 3] = [0x9a, 0xa0, 0xa8];
 const RED: [u8; 3] = [0xf3, 0x8b, 0xa8];
 const GREEN: [u8; 3] = [0xa6, 0xe3, 0xa1];
 
+pub const SOFT_KEY_BAR: f32 = 22.0;
+
 pub struct SoftKeys<'a> {
     pub left: &'a str,
     pub right: &'a str,
@@ -46,7 +48,7 @@ impl Face {
         keys: &SoftKeys,
         hint: Option<&str>,
     ) {
-        let (w, h) = (pm.width() as f32, pm.height() as f32);
+        let h = pm.height() as f32;
         self.background(pm);
 
         let clock_y = (h * 0.30).round();
@@ -54,18 +56,32 @@ impl Face {
         self.centered(pm, &self.text, 14.0, clock_y + 24.0, WHITE, &now.format("%A, %-d %B").to_string());
         self.status_row(pm, clock_y + 46.0, status);
 
-        let bar = 22.0;
         if let Some(hint) = hint {
-            self.centered(pm, &self.text, 13.0, h - bar - 14.0, WHITE, hint);
+            self.centered(pm, &self.text, 13.0, h - SOFT_KEY_BAR - 14.0, WHITE, hint);
         }
-        fill(pm, Rect::from_xywh(0.0, h - bar, w, bar).unwrap(), Color::from_rgba8(0, 0, 0, 150));
+        self.soft_keys(pm, keys);
+    }
+
+    pub fn soft_keys(&self, pm: &mut Pixmap, keys: &SoftKeys) {
+        let (w, h) = (pm.width() as f32, pm.height() as f32);
+        fill(pm, Rect::from_xywh(0.0, h - SOFT_KEY_BAR, w, SOFT_KEY_BAR).unwrap(), Color::from_rgba8(0, 0, 0, 150));
         let base = h - 7.0;
         self.text(pm, &self.text, 13.0, 7.0, base, WHITE, keys.left);
         let right = text_width(&self.text, 13.0, keys.right);
         self.text(pm, &self.text, 13.0, w - 7.0 - right, base, WHITE, keys.right);
     }
 
-    fn background(&self, pm: &mut Pixmap) {
+    /// Draws `s` with the text font and a shadow, centered on `cx`.
+    pub fn label(&self, pm: &mut Pixmap, px: f32, cx: f32, base: f32, color: [u8; 3], s: &str) {
+        let x = (cx - text_width(&self.text, px, s) / 2.0).round();
+        self.text(pm, &self.text, px, x, base, color, s);
+    }
+
+    pub fn fit(&self, px: f32, s: &str, max: f32) -> String {
+        ellipsize(&self.text, px, s, max)
+    }
+
+    pub fn background(&self, pm: &mut Pixmap) {
         let (w, h) = (pm.width() as f32, pm.height() as f32);
         pm.fill(Color::from_rgba8(0x1e, 0x1e, 0x2e, 0xff));
         if let Some(wp) = &self.wallpaper {
@@ -217,9 +233,40 @@ fn blend(dst: PremultipliedColorU8, src: [u8; 3], a: f32) -> PremultipliedColorU
     .unwrap()
 }
 
-fn fill(pm: &mut Pixmap, rect: Rect, color: Color) {
+pub fn fill(pm: &mut Pixmap, rect: Rect, color: Color) {
     let paint = Paint { shader: Shader::SolidColor(color), ..Default::default() };
     pm.fill_rect(rect, &paint, Transform::identity(), None);
+}
+
+pub fn rounded_rect(pm: &mut Pixmap, rect: Rect, radius: f32, paint: &Paint) {
+    let (l, t, r, b) = (rect.left(), rect.top(), rect.right(), rect.bottom());
+    let mut pb = PathBuilder::new();
+    pb.move_to(l + radius, t);
+    pb.line_to(r - radius, t);
+    pb.quad_to(r, t, r, t + radius);
+    pb.line_to(r, b - radius);
+    pb.quad_to(r, b, r - radius, b);
+    pb.line_to(l + radius, b);
+    pb.quad_to(l, b, l, b - radius);
+    pb.line_to(l, t + radius);
+    pb.quad_to(l, t, l + radius, t);
+    pb.close();
+    pm.fill_path(&pb.finish().unwrap(), paint, FillRule::Winding, Transform::identity(), None);
+}
+
+/// Process IDs whose `comm` is `name`, without zombies.
+pub fn pids(name: &str) -> Vec<u32> {
+    std::fs::read_dir("/proc")
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter_map(|p| {
+            let pid = p.file_name().to_str()?.parse().ok()?;
+            let stat = std::fs::read_to_string(p.path().join("stat")).ok()?;
+            let (comm, rest) = stat.split_once(") ")?;
+            (comm.ends_with(&format!("({name}")) && !rest.starts_with('Z')).then_some(pid)
+        })
+        .collect()
 }
 
 fn rgb(c: [u8; 3], a: u8) -> Color {
