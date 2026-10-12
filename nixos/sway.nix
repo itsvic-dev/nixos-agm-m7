@@ -31,10 +31,24 @@ let
   idle = pkgs.writeShellScript "sway-idle" ''
     # Sway may have restarted while the screen was dimmed.
     ${brightnessctl} -r || true
-    exec ${pkgs.swayidle}/bin/swayidle -w \
-      timeout 20 '${dim}' resume '${brightnessctl} -r' \
-      timeout 30 '${shell}/bin/agm-lock & ${swaymsg} "output * power off"' \
+    conf="''${XDG_CONFIG_HOME:-$HOME/.config}/agm/settings"
+    get() { sed -n "s/^$1=//p" "$conf" 2>/dev/null | grep . || echo "$2"; }
+    while :; do
+      dim=$(get dim_after 20)
+      off=$(get off_after 30)
+      set --
+      [ "$dim" != 0 ] && set -- "$@" timeout "$dim" '${dim}' resume '${brightnessctl} -r'
+      [ "$off" != 0 ] && set -- "$@" timeout "$off" '${shell}/bin/agm-lock & ${swaymsg} "output * power off"' \
         resume '${swaymsg} "output * power on"; ${swaymsg} "output * power on"'
+      if [ $# -eq 0 ]; then
+        sleep infinity &
+        wait $!
+      else
+        ${pkgs.swayidle}/bin/swayidle -w "$@"
+      fi
+      ${brightnessctl} -r || true
+      sleep 1
+    done
   '';
 
   status = pkgs.writeShellScript "sway-status" ''
@@ -105,21 +119,21 @@ in
 
   services.udev.packages = [ pkgs.brightnessctl ];
 
-  # Read-only iwd access for the home screen's Wi-Fi status.
+  # iwd access for the home screen and the settings app, without wheel.
   services.dbus.packages = [
     (pkgs.writeTextDir "share/dbus-1/system.d/agm-shell-iwd.conf" ''
       <!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-BUS Bus Configuration 1.0//EN"
         "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
       <busconfig>
         <policy user="user">
-          <allow send_destination="net.connman.iwd" send_interface="org.freedesktop.DBus.ObjectManager" send_member="GetManagedObjects"/>
-          <allow send_destination="net.connman.iwd" send_interface="net.connman.iwd.Station" send_member="GetOrderedNetworks"/>
+          <allow send_destination="net.connman.iwd"/>
         </policy>
       </busconfig>
     '')
   ];
 
   environment.systemPackages = [
+    shell
     pkgs.brightnessctl
     pkgs.foot
     pkgs.grim

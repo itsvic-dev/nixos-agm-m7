@@ -12,10 +12,10 @@
     ./wifi.nix
     ./firefox.nix
     ./gpu.nix
+    ./settings.nix
   ];
 
   networking.hostName = "agm-m7";
-  time.timeZone = "Europe/Warsaw";
   networking.useNetworkd = true;
   networking.useDHCP = false;
   networking.nftables.enable = true;
