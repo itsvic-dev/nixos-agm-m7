@@ -1,4 +1,5 @@
 mod audio;
+mod mobile;
 mod system;
 mod ui;
 mod wifi;
@@ -66,6 +67,8 @@ enum Page {
     Wifi,
     Network(wifi::Network),
     Password { network: wifi::Network, text: String, preedit: String, show: bool },
+    Mobile,
+    Apn { text: String, preedit: String },
     Display,
     Sound,
     Battery,
@@ -112,6 +115,8 @@ struct App {
     stack: Vec<Frame>,
     wifi: wifi::Wifi,
     wifi_state: wifi::State,
+    mobile: mobile::Mobile,
+    mobile_state: mobile::State,
     audio: audio::State,
     audio_switching: bool,
     config: Config,
@@ -179,6 +184,8 @@ impl App {
             Page::Root => "Settings".into(),
             Page::Wifi => "Wi-Fi".into(),
             Page::Network(n) | Page::Password { network: n, .. } => n.name.clone(),
+            Page::Mobile => "Mobile network".into(),
+            Page::Apn { .. } => "Access point name".into(),
             Page::Display => "Display".into(),
             Page::Sound => "Sound".into(),
             Page::Battery => "Battery".into(),
@@ -216,9 +223,20 @@ impl App {
                 let storage = system::storage()
                     .first()
                     .map_or(String::new(), |(_, used, total)| format!("{} of {} used", system::size(*used), system::size(*total)));
-                let status = agm_shell::status::Status { battery: agm_shell::status::battery(), wifi: None };
+                let m = &self.mobile_state;
+                let mobile = if !m.available {
+                    "Not available".to_string()
+                } else if m.data_active {
+                    format!("{} {}", m.operator, m.tech).trim().to_string()
+                } else if !m.data_enabled && m.sim == "Ready" {
+                    "Data off".into()
+                } else {
+                    m.status.clone()
+                };
+                let status = agm_shell::status::Status { battery: agm_shell::status::battery(), ..Default::default() };
                 vec![
                     Row::new("Wi-Fi", wifi, Kind::Link).icon("network-wireless-symbolic"),
+                    Row::new("Mobile network", mobile, Kind::Link).icon("network-cellular-signal-excellent-symbolic"),
                     Row::new("Display", format!("Brightness {:.0}%", brightness() * 100.0), Kind::Link).icon("display-brightness-symbolic"),
                     Row::new("Sound", sound, Kind::Link).icon("audio-volume-high-symbolic"),
                     Row::new("Battery", battery, Kind::Link).icon(agm_shell::shell::battery_icon(&status)),
@@ -265,6 +283,29 @@ impl App {
                     Row::new("Connect", "", Kind::Button),
                 ]
             }
+            Page::Mobile => {
+                let m = &self.mobile_state;
+                if !m.available {
+                    return vec![Row::new("The modem is not available", "", Kind::Info)];
+                }
+                let mode = m.mode.map_or("Other", |i| mobile::MODES[i].0);
+                let signal = if m.tech.is_empty() { "No service".to_string() } else { format!("{}, {}%", m.tech, m.signal) };
+                vec![
+                    Row::new("Mobile data", "", Kind::Toggle(m.data_enabled)),
+                    Row::new("Roaming", "", Kind::Toggle(m.roaming)),
+                    Row::new("Network type", mode, Kind::Info),
+                    Row::new("Access point name", &m.apn, Kind::Link),
+                    Row::new("Status", &m.status, Kind::Info),
+                    Row::new("Operator", &m.operator, Kind::Info),
+                    Row::new("Signal", signal, Kind::Info),
+                    Row::new("SIM", &m.sim, Kind::Info),
+                    Row::new("IMEI", &m.imei, Kind::Info),
+                ]
+            }
+            Page::Apn { text, preedit } => vec![
+                Row::new("APN", "", Kind::Field { text: text.clone(), preedit: preedit.clone(), focused: self.top().selected == 0 }),
+                Row::new("Save", "", Kind::Button),
+            ],
             Page::Display => {
                 let dim = self.config.get_u32(config::DIM_AFTER, config::DEFAULT_DIM_AFTER);
                 let off = self.config.get_u32(config::OFF_AFTER, config::DEFAULT_OFF_AFTER);
@@ -379,11 +420,16 @@ impl App {
     }
 
     fn update_text_input(&mut self) {
-        let want = matches!(self.top().page, Page::Password { .. }) && self.top().selected == 0 && self.ti_entered;
+        let password = matches!(self.top().page, Page::Password { .. });
+        let want = (password || matches!(self.top().page, Page::Apn { .. })) && self.top().selected == 0 && self.ti_entered;
         let Some(ti) = &self.text_input else { return };
         if want && !self.ti_enabled {
             ti.enable();
-            ti.set_content_type(ContentHint::SensitiveData | ContentHint::Latin, ContentPurpose::Password);
+            if password {
+                ti.set_content_type(ContentHint::SensitiveData | ContentHint::Latin, ContentPurpose::Password);
+            } else {
+                ti.set_content_type(ContentHint::Latin | ContentHint::Lowercase, ContentPurpose::Normal);
+            }
             ti.set_cursor_rectangle(10, ui::HEADER as i32 + 4, self.size.0 as i32 - 20, ui::ROW as i32 - 8);
             ti.commit();
         } else if !want && self.ti_enabled {
@@ -396,7 +442,7 @@ impl App {
     fn field(&mut self) -> Option<(&mut String, &mut String)> {
         let frame = self.stack.last_mut()?;
         match &mut frame.page {
-            Page::Password { text, preedit, .. } if frame.selected == 0 => Some((text, preedit)),
+            Page::Password { text, preedit, .. } | Page::Apn { text, preedit } if frame.selected == 0 => Some((text, preedit)),
             _ => None,
         }
     }
@@ -422,16 +468,47 @@ impl App {
         match &self.top().page {
             Page::Root => match index {
                 0 => self.push(Page::Wifi),
-                1 => self.push(Page::Display),
-                2 => {
+                1 => {
+                    self.mobile.send(mobile::Cmd::Refresh);
+                    self.push(Page::Mobile);
+                }
+                2 => self.push(Page::Display),
+                3 => {
                     self.audio = audio::State::load();
                     self.push(Page::Sound);
                 }
-                3 => self.push(Page::Battery),
-                4 => self.push(Page::DateTime),
-                5 => self.push(Page::Storage),
+                4 => self.push(Page::Battery),
+                5 => self.push(Page::DateTime),
+                6 => self.push(Page::Storage),
                 _ => self.push(Page::About),
             },
+            Page::Mobile => {
+                let m = self.mobile_state.clone();
+                if !m.available {
+                    return;
+                }
+                match index {
+                    0 => {
+                        self.mobile.send(mobile::Cmd::Data(!m.data_enabled));
+                        self.say(if m.data_enabled { "Turning mobile data off…" } else { "Turning mobile data on…" });
+                    }
+                    1 => self.mobile.send(mobile::Cmd::Roaming(!m.roaming)),
+                    2 => self.cycle_mode(1),
+                    3 => self.push(Page::Apn { text: m.apn.clone(), preedit: String::new() }),
+                    _ => {}
+                }
+            }
+            Page::Apn { text, .. } => {
+                let apn = text.trim().to_string();
+                if apn.is_empty() {
+                    self.say("Enter an access point name");
+                    return;
+                }
+                self.mobile.send(mobile::Cmd::Apn(apn.clone()));
+                self.stack.pop();
+                self.update_text_input();
+                self.say(format!("APN: {apn}"));
+            }
             Page::Wifi => match index {
                 0 => {
                     let on = !self.wifi_state.powered;
@@ -525,6 +602,17 @@ impl App {
         }
     }
 
+    fn cycle_mode(&mut self, delta: i32) {
+        let m = &self.mobile_state;
+        if m.modes.is_empty() {
+            return;
+        }
+        let at = m.mode.and_then(|i| m.modes.iter().position(|&c| c == i)).unwrap_or(0) as i32;
+        let next = m.modes[(at + delta).rem_euclid(m.modes.len() as i32) as usize];
+        self.mobile.send(mobile::Cmd::Mode(next));
+        self.say(format!("Network type: {}", mobile::MODES[next].0));
+    }
+
     fn set_timezone(&mut self, zone: String, pop: usize) {
         let result = self
             .bus
@@ -587,6 +675,16 @@ impl App {
         match &self.top().page {
             Page::Sound => return self.adjust_sound(index, delta),
             Page::Display => {}
+            Page::Mobile => {
+                let m = &self.mobile_state;
+                match index {
+                    0 if (delta > 0) != m.data_enabled => self.activate(0),
+                    1 if (delta > 0) != m.roaming => self.activate(1),
+                    2 => self.cycle_mode(delta),
+                    _ => {}
+                }
+                return;
+            }
             Page::Wifi if index == 0 => {
                 if (delta > 0) != self.wifi_state.powered {
                     self.activate(0);
@@ -726,6 +824,7 @@ fn main() {
 
     let mut event_loop: EventLoop<App> = EventLoop::try_new().unwrap();
     let (wifi_tx, wifi_rx) = channel::channel();
+    let (mobile_tx, mobile_rx) = channel::channel();
     let mut app = App {
         conn: conn.clone(),
         handle: event_loop.handle(),
@@ -749,6 +848,8 @@ fn main() {
         stack: vec![Frame { page: Page::Root, selected: 0, scroll: 0 }],
         wifi: wifi::Wifi::start(wifi_tx),
         wifi_state: wifi::State::default(),
+        mobile: mobile::Mobile::start(mobile_tx),
+        mobile_state: mobile::State::default(),
         audio: audio::State::default(),
         audio_switching: false,
         config: Config::load(),
@@ -774,6 +875,18 @@ fn main() {
                 }
             }
             Event::Msg(wifi::Event::Message(text)) => app.say(text),
+            Event::Closed => {}
+        })
+        .unwrap();
+    handle
+        .insert_source(mobile_rx, |event, _, app| match event {
+            Event::Msg(mobile::Event::State(state)) => {
+                app.mobile_state = state;
+                if matches!(app.top().page, Page::Root | Page::Mobile) {
+                    app.draw();
+                }
+            }
+            Event::Msg(mobile::Event::Message(text)) => app.say(text),
             Event::Closed => {}
         })
         .unwrap();
