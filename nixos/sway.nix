@@ -8,6 +8,7 @@
 let
   fuzzel = pkgs.fuzzel.override { svgBackend = "nanosvg"; };
   t9 = pkgs.callPackage ../tools/t9/package.nix { sway = config.programs.sway.package; };
+  shell = pkgs.callPackage ../tools/shell/package.nix { };
 
   bindings = ''
     bindsym XF86MenuKB exec ${fuzzel}/bin/fuzzel
@@ -24,7 +25,7 @@ let
     ${brightnessctl} -r || true
     exec ${pkgs.swayidle}/bin/swayidle -w \
       timeout 20 '${brightnessctl} -s set 30%' resume '${brightnessctl} -r' \
-      timeout 30 '${swaymsg} "output * power off"' \
+      timeout 30 '${shell}/bin/agm-lock & ${swaymsg} "output * power off"' \
         resume '${swaymsg} "output * power on"; ${swaymsg} "output * power on"'
   '';
 
@@ -57,9 +58,9 @@ let
       status_command ${status}
     }
 
+    exec ${shell}/bin/agm-home
     exec ${idle}
     exec ${pkgs.wvkbd}/bin/wvkbd-mobintl --hidden -H 130
-    exec ${pkgs.foot}/bin/foot
     exec ${t9}/bin/t9
   '';
 in
@@ -83,6 +84,20 @@ in
   services.pipewire.enable = lib.mkForce false;
 
   services.udev.packages = [ pkgs.brightnessctl ];
+
+  # Read-only iwd access for the home screen's Wi-Fi status.
+  services.dbus.packages = [
+    (pkgs.writeTextDir "share/dbus-1/system.d/agm-shell-iwd.conf" ''
+      <!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-BUS Bus Configuration 1.0//EN"
+        "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
+      <busconfig>
+        <policy user="user">
+          <allow send_destination="net.connman.iwd" send_interface="org.freedesktop.DBus.ObjectManager" send_member="GetManagedObjects"/>
+          <allow send_destination="net.connman.iwd" send_interface="net.connman.iwd.Station" send_member="GetOrderedNetworks"/>
+        </policy>
+      </busconfig>
+    '')
+  ];
 
   environment.systemPackages = [
     pkgs.brightnessctl
