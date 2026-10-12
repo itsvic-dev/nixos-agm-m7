@@ -39,6 +39,12 @@
 
   hardware.graphics.enable = true;
 
+  environment.sessionVariables = {
+    PVR_I_WANT_A_BROKEN_VULKAN_DRIVER = "1";
+    # Sway renders with pixman, so present through wl_shm from a linear image.
+    MESA_VK_WSI_DEBUG = "sw,linear";
+  };
+
   environment.systemPackages = [
     pkgs.vulkan-tools
     (pkgs.callPackage ../tools/vk-compute/package.nix { })
