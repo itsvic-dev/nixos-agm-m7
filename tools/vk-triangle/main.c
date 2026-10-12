@@ -39,6 +39,32 @@ static uint32_t find_memory(VkPhysicalDevice phys, uint32_t bits, VkMemoryProper
 	return type;
 }
 
+static int has_instance_ext(const char *name)
+{
+	VkExtensionProperties props[64];
+	uint32_t n = 64;
+
+	vkEnumerateInstanceExtensionProperties(NULL, &n, props);
+	for (uint32_t i = 0; i < n; i++)
+		if (!strcmp(props[i].extensionName, name))
+			return 1;
+
+	return 0;
+}
+
+static int has_device_ext(VkPhysicalDevice phys, const char *name)
+{
+	VkExtensionProperties props[256];
+	uint32_t n = 256;
+
+	vkEnumerateDeviceExtensionProperties(phys, NULL, &n, props);
+	for (uint32_t i = 0; i < n; i++)
+		if (!strcmp(props[i].extensionName, name))
+			return 1;
+
+	return 0;
+}
+
 static uint32_t twiddle(uint32_t x, uint32_t y, uint32_t w, uint32_t h)
 {
 	uint32_t bits_x = 0, bits_y = 0, m = 0, out = 0;
@@ -78,13 +104,19 @@ int main(int argc, char **argv)
 	int draw = argc < 2;
 	int store = argc > 1 && !strcmp(argv[1], "store");
 
+	const char *portability_ext = VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME;
+	int portability = has_instance_ext(portability_ext);
+
 	VkInstance instance;
 	CHECK(vkCreateInstance(&(VkInstanceCreateInfo){
 		.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+		.flags = portability ? VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR : 0,
 		.pApplicationInfo = &(VkApplicationInfo){
 			.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
 			.apiVersion = VK_API_VERSION_1_2,
 		},
+		.enabledExtensionCount = portability,
+		.ppEnabledExtensionNames = &portability_ext,
 	}, NULL, &instance));
 
 	uint32_t n = 1;
@@ -99,9 +131,14 @@ int main(int argc, char **argv)
 	while (family < qf_count && (qf[family].queueFlags & need) != need)
 		family++;
 
+	const char *subset_ext = "VK_KHR_portability_subset";
+	int subset = has_device_ext(phys, subset_ext);
+
 	VkDevice dev;
 	CHECK(vkCreateDevice(phys, &(VkDeviceCreateInfo){
 		.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+		.enabledExtensionCount = subset,
+		.ppEnabledExtensionNames = &subset_ext,
 		.queueCreateInfoCount = 1,
 		.pQueueCreateInfos = &(VkDeviceQueueCreateInfo){
 			.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
