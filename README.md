@@ -122,3 +122,7 @@ Mainline Linux and NixOS on the AGM M7, a rugged keypad phone with a MediaTek MT
 - `tools/`: home screen, keyguard and settings (`shell`, Rust), the `t9` input method, the modem NVRAM service and ModemManager plugin, GPU test programs.
 - `scripts/`: build, flash, deploy and test helpers.
 - `docs/`: findings and reverse engineering notes.
+
+## License
+
+GPL-2.0-or-later, see `LICENSE`. Files with their own license header keep it.
