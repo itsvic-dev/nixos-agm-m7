@@ -1,10 +1,14 @@
 { pkgs, ... }:
 
 {
-  networking.wireless.iwd = {
+  # NetworkManager owns connections, routes and DNS; iwd is only its Wi-Fi backend.
+  networking.wireless.iwd.enable = true;
+  networking.networkmanager = {
     enable = true;
-    settings.General.EnableNetworkConfiguration = true;
+    wifi.backend = "iwd";
+    unmanaged = [ "interface-name:usb0" ];
   };
+  users.users.user.extraGroups = [ "networkmanager" ];
 
   environment.systemPackages = [ pkgs.iw ];
 
