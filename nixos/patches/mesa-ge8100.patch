@@ -157,6 +157,37 @@ index a859059..892587e 100644
        /* Align to a 2x2 tile block. */
        *x_out = ALIGN_POT(*x_out, 2);
        *y_out = ALIGN_POT(*y_out, 2);
+diff --git a/src/imagination/vulkan/pvr_arch_framebuffer.c b/src/imagination/vulkan/pvr_arch_framebuffer.c
+index a70748f..2f99a9f 100644
+--- a/src/imagination/vulkan/pvr_arch_framebuffer.c
++++ b/src/imagination/vulkan/pvr_arch_framebuffer.c
+@@ -40,17 +40,16 @@ pvr_render_state_create_ppp_state(struct pvr_device *device,
+       header.pres_terminate = true;
+    }
+ 
++   const uint32_t clip_block_size =
++      PVR_GET_FEATURE_VALUE(&device->pdevice->dev_info,
++                            simple_parameter_format_version,
++                            0) == 1
++         ? 16
++         : ROGUE_TA_STATE_TERMINATE0_CLIP_RIGHT_BLOCK_SIZE_IN_PIXELS;
++
+    pvr_csb_pack (&ppp_state[1], TA_STATE_TERMINATE0, term0) {
+-      term0.clip_right =
+-         DIV_ROUND_UP(
+-            rstate->width,
+-            ROGUE_TA_STATE_TERMINATE0_CLIP_RIGHT_BLOCK_SIZE_IN_PIXELS) -
+-         1;
+-      term0.clip_bottom =
+-         DIV_ROUND_UP(
+-            rstate->height,
+-            ROGUE_TA_STATE_TERMINATE0_CLIP_BOTTOM_BLOCK_SIZE_IN_PIXELS) -
+-         1;
++      term0.clip_right = DIV_ROUND_UP(rstate->width, clip_block_size) - 1;
++      term0.clip_bottom = DIV_ROUND_UP(rstate->height, clip_block_size) - 1;
+    }
+ 
+    pvr_csb_pack (&ppp_state[2], TA_STATE_TERMINATE1, term1) {
 diff --git a/src/imagination/vulkan/pvr_arch_job_render.c b/src/imagination/vulkan/pvr_arch_job_render.c
 index 5ce4260..974e03c 100644
 --- a/src/imagination/vulkan/pvr_arch_job_render.c
