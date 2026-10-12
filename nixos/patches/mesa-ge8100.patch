@@ -1,6 +1,8 @@
-diff -ruN a/src/imagination/common/device_info/ge8100.h b/src/imagination/common/device_info/ge8100.h
---- a/src/imagination/common/device_info/ge8100.h	1970-01-01 01:00:00
-+++ b/src/imagination/common/device_info/ge8100.h	2026-10-11 23:29:13
+diff --git a/src/imagination/common/device_info/ge8100.h b/src/imagination/common/device_info/ge8100.h
+new file mode 100644
+index 0000000..f0a43c3
+--- /dev/null
++++ b/src/imagination/common/device_info/ge8100.h
 @@ -0,0 +1,107 @@
 +/*
 + * SPDX-License-Identifier: MIT
@@ -109,9 +111,10 @@ diff -ruN a/src/imagination/common/device_info/ge8100.h b/src/imagination/common
 +};
 +
 +#endif /* GE8100_H */
-diff -ruN a/src/imagination/common/pvr_device_info.c b/src/imagination/common/pvr_device_info.c
---- a/src/imagination/common/pvr_device_info.c	2026-10-11 23:28:49
-+++ b/src/imagination/common/pvr_device_info.c	2026-10-11 23:28:49
+diff --git a/src/imagination/common/pvr_device_info.c b/src/imagination/common/pvr_device_info.c
+index eb586eb..a65d680 100644
+--- a/src/imagination/common/pvr_device_info.c
++++ b/src/imagination/common/pvr_device_info.c
 @@ -35,6 +35,7 @@
  #include "device_info/gx6250.h"
  #include "device_info/gx6650.h"
@@ -120,7 +123,7 @@ diff -ruN a/src/imagination/common/pvr_device_info.c b/src/imagination/common/pv
  #include "device_info/ge8300.h"
  #include "device_info/axe-1-16m.h"
  #include "device_info/bxe-2-32.h"
-@@ -53,6 +54,7 @@
+@@ -53,6 +54,7 @@ static const struct pvr_device_info *device_infos[] = {
     &pvr_device_info_15_5_1_64,
     &pvr_device_info_22_67_54_30,
     &pvr_device_info_22_68_54_30,
@@ -128,7 +131,7 @@ diff -ruN a/src/imagination/common/pvr_device_info.c b/src/imagination/common/pv
     &pvr_device_info_22_102_54_38,
     &pvr_device_info_33_15_11_3,
     &pvr_device_info_36_29_52_182,
-@@ -85,6 +87,7 @@
+@@ -85,6 +87,7 @@ int pvr_device_info_init(struct pvr_device_info *info, uint64_t bvnc)
        CASE_PACKED_BVNC_DEVICE_INFO(4, 46, 6, 62);
        CASE_PACKED_BVNC_DEVICE_INFO(5, 9, 1, 46);
        CASE_PACKED_BVNC_DEVICE_INFO(15, 5, 1, 64);
@@ -136,3 +139,48 @@ diff -ruN a/src/imagination/common/pvr_device_info.c b/src/imagination/common/pv
        CASE_PACKED_BVNC_DEVICE_INFO(22, 67, 54, 30);
        CASE_PACKED_BVNC_DEVICE_INFO(22, 68, 54, 30);
        CASE_PACKED_BVNC_DEVICE_INFO(22, 102, 54, 38);
+diff --git a/src/imagination/include/hwdef/rogue_hw_utils.h b/src/imagination/include/hwdef/rogue_hw_utils.h
+index a859059..892587e 100644
+--- a/src/imagination/include/hwdef/rogue_hw_utils.h
++++ b/src/imagination/include/hwdef/rogue_hw_utils.h
+@@ -154,10 +154,9 @@ rogue_get_isp_num_tiles_xy(const struct pvr_device_info *dev_info,
+    *x_out = DIV_ROUND_UP(width * scale_x, tile_samples_x);
+    *y_out = DIV_ROUND_UP(height * scale_y, tile_samples_y);
+ 
+-   if (PVR_HAS_FEATURE(dev_info, simple_internal_parameter_format)) {
+-      assert(PVR_GET_FEATURE_VALUE(dev_info,
+-                                   simple_parameter_format_version,
+-                                   0U) == 2U);
++   if (PVR_HAS_FEATURE(dev_info, simple_internal_parameter_format) &&
++       PVR_GET_FEATURE_VALUE(dev_info, simple_parameter_format_version, 0U) ==
++          2U) {
+       /* Align to a 2x2 tile block. */
+       *x_out = ALIGN_POT(*x_out, 2);
+       *y_out = ALIGN_POT(*y_out, 2);
+diff --git a/src/imagination/vulkan/pvr_arch_job_render.c b/src/imagination/vulkan/pvr_arch_job_render.c
+index 5ce4260..974e03c 100644
+--- a/src/imagination/vulkan/pvr_arch_job_render.c
++++ b/src/imagination/vulkan/pvr_arch_job_render.c
+@@ -127,10 +127,18 @@ void pvr_arch_rt_mtile_info_init(const struct pvr_device_info *dev_info,
+ 
+    rogue_get_num_macrotiles_xy(dev_info, &info->mtiles_x, &info->mtiles_y);
+ 
+-   if (PVR_HAS_FEATURE(dev_info, simple_internal_parameter_format)) {
+-      assert(PVR_GET_FEATURE_VALUE(dev_info,
+-                                   simple_parameter_format_version,
+-                                   0) == 2);
++   if (PVR_HAS_FEATURE(dev_info, simple_internal_parameter_format) &&
++       PVR_GET_FEATURE_VALUE(dev_info, simple_parameter_format_version, 0) ==
++          1) {
++      info->mtile_x1 = info->num_tiles_x;
++      info->mtile_y1 = info->num_tiles_y;
++      info->mtile_x2 = info->num_tiles_x;
++      info->mtile_y2 = info->num_tiles_y;
++      info->mtile_x3 = info->num_tiles_x;
++      info->mtile_y3 = info->num_tiles_y;
++      info->x_tile_max = info->num_tiles_x - 1;
++      info->y_tile_max = info->num_tiles_y - 1;
++   } else if (PVR_HAS_FEATURE(dev_info, simple_internal_parameter_format)) {
+       /* Set up 16 macrotiles with a multiple of 2x2 tiles per macrotile,
+        * which is aligned to a tile group.
+        */
