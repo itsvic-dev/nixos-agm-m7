@@ -23,6 +23,8 @@ LK loads at 0x46000000. Facts found by disassembly:
 
 Our `boot.img` is in `boot` (`mmcblk0p25`). The stock LineageOS boot image is in `recovery` (`mmcblk0p2`). LK loads and starts the modem only in normal boot; in recovery mode it turns the modem off. A normal reboot or a watchdog reset boots NixOS. LineageOS boots only with `reboot recovery`.
 
+In recovery boot mode the vendor rule in `init.mt6739.usb.rc` never binds the USB gadget, so LineageOS has no USB ADB. `/system/etc/init/agm-m7.rc` on LineageOS has a fallback: after `sys.boot_completed=1` with `ro.bootmode=recovery`, it links `ffs.adb` and writes the `UDC`. Root (`phh-su`) works only from an ADB shell.
+
 1. Boot LineageOS (GSI). Root is `phh-su -c`.
 2. `scripts/build.sh` in the `agm-m7` OrbStack VM, then `KERNEL=vm scripts/mkboot-nix.sh` on the host.
 3. `scripts/test-boot.sh <name>` writes `out/boot.img` to `boot`, runs `adb reboot`, waits for LineageOS, and copies pstore to `logs/<name>/`.
