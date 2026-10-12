@@ -20,6 +20,7 @@ const KEY_MGMT_802_1X: u32 = 0x200;
 const AP_FLAGS_PRIVACY: u32 = 0x1;
 
 pub enum Cmd {
+    Refresh,
     Power(bool),
     Scan,
     Connect { network: OwnedObjectPath, passphrase: Option<String> },
@@ -59,6 +60,8 @@ pub struct Wifi {
 impl Wifi {
     pub fn start(events: Sender<Event>) -> Wifi {
         let (tx, rx) = mpsc::channel();
+        let changed = tx.clone();
+        agm_shell::netwatch::watch(move || changed.send(Cmd::Refresh).is_ok());
         std::thread::spawn(move || run(rx, events));
         Wifi { tx }
     }
@@ -83,7 +86,7 @@ fn run(rx: mpsc::Receiver<Cmd>, events: Sender<Event>) {
         scan_until = Instant::now() + Duration::from_secs(5);
     }
     loop {
-        match rx.recv_timeout(Duration::from_secs(3)) {
+        match rx.recv_timeout(Duration::from_secs(30)) {
             Ok(cmd) => {
                 if matches!(cmd, Cmd::Scan) {
                     scan_until = Instant::now() + Duration::from_secs(5);
@@ -108,12 +111,15 @@ fn nm(bus: &Connection) -> zbus::Result<Proxy<'_>> {
 }
 
 fn handle(bus: &Connection, state: &State, cmd: Cmd, events: &Sender<Event>) -> zbus::Result<()> {
+    if let Cmd::Refresh = cmd {
+        return Ok(());
+    }
     if let Cmd::Power(on) = cmd {
         return nm(bus)?.set_property("WirelessEnabled", on).map_err(Into::into);
     }
     let device = state.device.clone().ok_or(zbus::Error::Failure("no Wi-Fi device".into()))?;
     match cmd {
-        Cmd::Power(_) => unreachable!(),
+        Cmd::Refresh | Cmd::Power(_) => unreachable!(),
         Cmd::Scan => {
             let opts: HashMap<&str, Value> = HashMap::new();
             Proxy::new(bus, NM, device, WIRELESS)?.call("RequestScan", &(opts,))

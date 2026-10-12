@@ -8,6 +8,7 @@ use smithay_client_toolkit::{
     reexports::{
         calloop::{
             EventLoop, LoopHandle,
+            channel,
             timer::{TimeoutAction, Timer},
         },
         calloop_wayland_source::WaylandSource,
@@ -138,6 +139,18 @@ fn main() {
             lock.status = Status::read(lock.bus.as_ref());
             lock.draw();
             TimeoutAction::ToDuration(Duration::from_secs(30))
+        })
+        .unwrap();
+
+    let (changed, rx) = channel::channel();
+    agm_shell::netwatch::watch(move || changed.send(()).is_ok());
+    event_loop
+        .handle()
+        .insert_source(rx, |event, _, lock| {
+            if let channel::Event::Msg(()) = event {
+                lock.status = Status::read(lock.bus.as_ref());
+                lock.draw();
+            }
         })
         .unwrap();
 

@@ -109,6 +109,16 @@ fn main() {
         })
         .unwrap();
 
+    let (changed, rx) = channel::channel();
+    agm_shell::netwatch::watch(move || changed.send(()).is_ok());
+    handle
+        .insert_source(rx, |event, _, home| {
+            if let Event::Msg(()) = event {
+                home.refresh();
+            }
+        })
+        .unwrap();
+
     let (keys, rx) = channel::channel();
     watch_keys(keys);
     let mut menu_at: Option<Instant> = None;

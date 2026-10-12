@@ -8,6 +8,7 @@ use smithay_client_toolkit::{
     reexports::{
         calloop::{
             EventLoop,
+            channel::{self, Event},
             timer::{TimeoutAction, Timer},
         },
         calloop_wayland_source::WaylandSource,
@@ -99,6 +100,16 @@ fn main() {
         .insert_source(Timer::from_duration(until_next_tick()), |_, _, home| {
             home.refresh();
             TimeoutAction::ToDuration(until_next_tick())
+        })
+        .unwrap();
+
+    let (changed, rx) = channel::channel();
+    agm_shell::netwatch::watch(move || changed.send(()).is_ok());
+    handle
+        .insert_source(rx, |event, _, bar| {
+            if let Event::Msg(()) = event {
+                bar.refresh();
+            }
         })
         .unwrap();
 

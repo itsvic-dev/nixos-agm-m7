@@ -1,6 +1,7 @@
 pub mod config;
 pub mod draw;
 pub mod icons;
+pub mod netwatch;
 pub mod shell;
 pub mod status;
 pub mod text;
