@@ -51,5 +51,5 @@ Nothing. Pick from the follow-ups.
 - Display: backlight control (`disp_pwm0`), panel power and init without LK, TE or a vblank event, DBI frame-done IRQ instead of polling.
 - macOS sometimes does not create the USB network interface. A cable replug fixes it.
 - T9: learn new words, number mode for number fields (`content_type`), keep `wvkbd` keys out of T9.
-- GPU: HWR recovery after a lockup, GLES 3 (needs transform feedback), hardware WebRender in Firefox, load `powervr` at boot, Sway on the GPU instead of pixman. See `GPU.md`.
+- GPU: HWR recovery after a lockup, GLES 3 (needs transform feedback), hardware WebRender in Firefox, Sway on the GPU instead of pixman. See `GPU.md`.
 - SD card, Bluetooth, audio, vibrator.

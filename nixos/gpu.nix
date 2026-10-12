@@ -36,8 +36,21 @@
     })
   ];
 
-  # Loaded by hand while the DDK 1.9 GPU firmware path is in development.
+  # The firmware is on /vendor, so udev must not load the driver before it is mounted.
   boot.blacklistedKernelModules = [ "powervr" ];
+
+  systemd.services.powervr = {
+    description = "Load the PowerVR GPU driver";
+    wantedBy = [ "multi-user.target" ];
+    before = [ "sway.service" ];
+    requires = [ "vendor.mount" ];
+    after = [ "vendor.mount" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = "${pkgs.kmod}/bin/modprobe powervr";
+    };
+  };
 
   hardware.graphics.enable = true;
 

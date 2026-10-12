@@ -30,7 +30,7 @@ Mainline Linux and NixOS on the AGM M7, a rugged keypad phone with a MediaTek MT
 | Audio | N | |
 | Camera, flashlight | N | |
 | Vibrator | N | |
-| GPU (PowerVR GE8100) | Partial | Vendor DDK 1.9 firmware on the mainline `powervr` driver, see [docs/GPU.md](docs/GPU.md). Mesa Vulkan 1.2 (vkcube), and GL 2.1 / GLES 2.0 through Zink (WebGL 1 in Firefox). Not loaded at boot (`modprobe powervr`). Sway still renders with pixman |
+| GPU (PowerVR GE8100) | Partial | Vendor DDK 1.9 firmware on the mainline `powervr` driver, see [docs/GPU.md](docs/GPU.md). Mesa Vulkan 1.2 (vkcube), and GL 2.1 / GLES 2.0 through Zink (WebGL 1 in Firefox). Loaded at boot. Sway still renders with pixman |
 
 ## How it boots
 

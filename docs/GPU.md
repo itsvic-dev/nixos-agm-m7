@@ -62,7 +62,7 @@ github.com/LgPWNd/Alcatel_mt6739_5059R_and_5041C_universal_kernel-4.4.95-,
 - `pvr_ddk19_fwif.h` has the 1.9 structs. Offsets come from the firmware DWARF (`tools/fwif-dwarf.py`) and are checked with `static_assert`.
 - HW APM writes to `mfg_cfg` after every power-on, as `MTKInitHWAPM` does.
 - Result: `firmware_started` is set, compatibility checks report BVNC 22.49.21.16, DDK 1.9 build 4893595, MIPS. The firmware trace works (decode with `rgx_fwif_sf.h`: id = bits 0-11, group = bits 12-15, argument count = bits 16-19).
-- The probe then stops on purpose with `-ENODEV` and halts the firmware. `powervr` is blacklisted; load it with `modprobe powervr`.
+- The probe then stops on purpose with `-ENODEV` and halts the firmware.
 
 ## Stage 3a (done)
 
@@ -122,7 +122,8 @@ github.com/LgPWNd/Alcatel_mt6739_5059R_and_5041C_universal_kernel-4.4.95-,
   - The firmware's one-time dummy region header init writes 5 KiB; it now goes to the INIA scratch buffer.
   - Transfer jobs are translated; `ISP_PIXEL_BASE` is the transfer heap base (0).
 - Display: Sway renders with pixman, so Vulkan presents through `wl_shm` from a linear image (`MESA_VK_WSI_DEBUG=sw,linear`, set system-wide).
-- vkcube runs: `modprobe powervr`, then `vkcube --wsi wayland` in the Sway session. No HWR.
+- vkcube runs: `vkcube --wsi wayland` in the Sway session. No HWR.
+- `powervr.service` loads the driver at boot, after `/vendor` is mounted. udev must not load it earlier, so it stays blacklisted.
 
 ![vkcube on the GE8100](img/vkcube.png)
 
