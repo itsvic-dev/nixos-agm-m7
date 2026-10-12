@@ -1,13 +1,23 @@
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, mpsc};
-use std::time::Duration;
+use std::sync::mpsc;
+use std::time::{Duration, Instant};
 
 use calloop::channel::Sender;
-use zbus::blocking::{Connection, Proxy, fdo::ObjectManagerProxy};
-use zbus::zvariant::{ObjectPath, OwnedObjectPath, OwnedValue, Value};
+use zbus::blocking::{Connection, Proxy};
+use zbus::zvariant::{OwnedObjectPath, OwnedValue, Value};
 
-const IWD: &str = "net.connman.iwd";
-const AGENT: &str = "/agm/settings/agent";
+const NM: &str = "org.freedesktop.NetworkManager";
+const NM_PATH: &str = "/org/freedesktop/NetworkManager";
+const DEVICE: &str = "org.freedesktop.NetworkManager.Device";
+const WIRELESS: &str = "org.freedesktop.NetworkManager.Device.Wireless";
+const AP: &str = "org.freedesktop.NetworkManager.AccessPoint";
+const SETTINGS: &str = "org.freedesktop.NetworkManager.Settings";
+const CONNECTION: &str = "org.freedesktop.NetworkManager.Settings.Connection";
+const ACTIVE: &str = "org.freedesktop.NetworkManager.Connection.Active";
+
+const DEVICE_TYPE_WIFI: u32 = 2;
+const KEY_MGMT_802_1X: u32 = 0x200;
+const AP_FLAGS_PRIVACY: u32 = 0x1;
 
 pub enum Cmd {
     Power(bool),
@@ -58,25 +68,6 @@ impl Wifi {
     }
 }
 
-struct Agent {
-    passphrase: Arc<Mutex<Option<String>>>,
-}
-
-#[zbus::interface(name = "net.connman.iwd.Agent")]
-impl Agent {
-    fn release(&self) {}
-
-    fn request_passphrase(&self, _network: OwnedObjectPath) -> zbus::fdo::Result<String> {
-        self.passphrase
-            .lock()
-            .unwrap()
-            .clone()
-            .ok_or_else(|| zbus::fdo::Error::Failed("no passphrase".into()))
-    }
-
-    fn cancel(&self, _reason: String) {}
-}
-
 fn run(rx: mpsc::Receiver<Cmd>, events: Sender<Event>) {
     let bus = match Connection::system() {
         Ok(bus) => bus,
@@ -85,16 +76,16 @@ fn run(rx: mpsc::Receiver<Cmd>, events: Sender<Event>) {
             return;
         }
     };
-    let passphrase = Arc::new(Mutex::new(None));
-    let _ = bus.object_server().at(AGENT, Agent { passphrase: passphrase.clone() });
-    let _ = Proxy::new(&bus, IWD, "/net/connman/iwd", "net.connman.iwd.AgentManager")
-        .and_then(|p| p.call::<_, _, ()>("RegisterAgent", &(ObjectPath::try_from(AGENT).unwrap(),)));
 
     let mut state = State::default();
+    let mut scan_until = Instant::now();
     loop {
         match rx.recv_timeout(Duration::from_secs(3)) {
             Ok(cmd) => {
-                if let Err(e) = handle(&bus, &state, &passphrase, cmd) {
+                if matches!(cmd, Cmd::Scan) {
+                    scan_until = Instant::now() + Duration::from_secs(5);
+                }
+                if let Err(e) = handle(&bus, &state, cmd, &events) {
                     let _ = events.send(Event::Message(describe(&e)));
                 }
             }
@@ -102,84 +93,185 @@ fn run(rx: mpsc::Receiver<Cmd>, events: Sender<Event>) {
             Err(mpsc::RecvTimeoutError::Disconnected) => return,
         }
         state = read_state(&bus).unwrap_or_default();
+        state.scanning = Instant::now() < scan_until;
         if events.send(Event::State(state.clone())).is_err() {
             return;
         }
     }
 }
 
-fn handle(bus: &Connection, state: &State, passphrase: &Mutex<Option<String>>, cmd: Cmd) -> zbus::Result<()> {
-    let device = state.device.clone().ok_or(zbus::Error::Failure("no Wi-Fi device".into()))?;
-    let station = || Proxy::new(bus, IWD, device.clone(), "net.connman.iwd.Station");
-    match cmd {
-        Cmd::Power(on) => {
-            let props = Proxy::new(bus, IWD, device.clone(), "org.freedesktop.DBus.Properties")?;
-            props.call::<_, _, ()>("Set", &("net.connman.iwd.Device", "Powered", Value::from(on)))
-        }
-        Cmd::Scan => station()?.call("Scan", &()),
-        Cmd::Connect { network, passphrase: pass } => {
-            *passphrase.lock().unwrap() = pass;
-            let result = Proxy::new(bus, IWD, network, "net.connman.iwd.Network")?.call("Connect", &());
-            *passphrase.lock().unwrap() = None;
-            result
-        }
-        Cmd::Disconnect => station()?.call("Disconnect", &()),
-        Cmd::Forget(known) => Proxy::new(bus, IWD, known, "net.connman.iwd.KnownNetwork")?.call("Forget", &()),
+fn nm(bus: &Connection) -> zbus::Result<Proxy<'_>> {
+    Proxy::new(bus, NM, NM_PATH, NM)
+}
+
+fn handle(bus: &Connection, state: &State, cmd: Cmd, events: &Sender<Event>) -> zbus::Result<()> {
+    if let Cmd::Power(on) = cmd {
+        return nm(bus)?.set_property("WirelessEnabled", on).map_err(Into::into);
     }
+    let device = state.device.clone().ok_or(zbus::Error::Failure("no Wi-Fi device".into()))?;
+    match cmd {
+        Cmd::Power(_) => unreachable!(),
+        Cmd::Scan => {
+            let opts: HashMap<&str, Value> = HashMap::new();
+            Proxy::new(bus, NM, device, WIRELESS)?.call("RequestScan", &(opts,))
+        }
+        Cmd::Connect { network, passphrase } => connect(bus, &device, network, passphrase, events),
+        Cmd::Disconnect => Proxy::new(bus, NM, device, DEVICE)?.call("Disconnect", &()),
+        Cmd::Forget(known) => Proxy::new(bus, NM, known, CONNECTION)?.call("Delete", &()),
+    }
+}
+
+fn connect(
+    bus: &Connection,
+    device: &OwnedObjectPath,
+    ap: OwnedObjectPath,
+    passphrase: Option<String>,
+    events: &Sender<Event>,
+) -> zbus::Result<()> {
+    let ssid: Vec<u8> = Proxy::new(bus, NM, ap.clone(), AP)?.get_property("Ssid")?;
+    let known = known_connections(bus)?.remove(&ssid);
+    let (active, added) = match (known, passphrase) {
+        (Some(conn), None) => {
+            let active: OwnedObjectPath = nm(bus)?.call("ActivateConnection", &(conn, device, ap))?;
+            (active, None)
+        }
+        (_, passphrase) => {
+            let mut settings: HashMap<&str, HashMap<&str, Value>> = HashMap::new();
+            if let Some(psk) = passphrase {
+                settings.insert(
+                    "802-11-wireless-security",
+                    HashMap::from([("key-mgmt", Value::from("wpa-psk")), ("psk", Value::from(psk))]),
+                );
+            }
+            let (conn, active): (OwnedObjectPath, OwnedObjectPath) =
+                nm(bus)?.call("AddAndActivateConnection", &(settings, device, ap))?;
+            (active, Some(conn))
+        }
+    };
+
+    // A wrong password does not fail the call; the activation fails later.
+    let deadline = Instant::now() + Duration::from_secs(30);
+    while Instant::now() < deadline {
+        std::thread::sleep(Duration::from_millis(500));
+        let state: Option<u32> = Proxy::new(bus, NM, active.clone(), ACTIVE)?.get_property("State").ok();
+        match state {
+            Some(2) => return Ok(()),
+            Some(1) => continue,
+            _ => break,
+        }
+    }
+    if let Some(conn) = added {
+        let _ = Proxy::new(bus, NM, conn, CONNECTION)?.call::<_, _, ()>("Delete", &());
+    }
+    let _ = events.send(Event::Message("Could not connect. Wrong password?".into()));
+    Ok(())
 }
 
 fn describe(e: &zbus::Error) -> String {
     match e {
-        zbus::Error::MethodError(name, desc, _) => {
-            let short = name.as_str().rsplit('.').next().unwrap_or("Error");
-            match (short, desc.as_deref()) {
-                ("Failed", _) => "Could not connect. Wrong password?".into(),
-                ("Aborted", _) => "Cancelled".into(),
-                ("Busy", _) | ("InProgress", _) => "Wi-Fi is busy, try again".into(),
-                (_, Some(desc)) => desc.to_string(),
-                (short, None) => short.to_string(),
-            }
-        }
+        zbus::Error::MethodError(_, Some(desc), _) => desc.to_string(),
+        zbus::Error::MethodError(name, None, _) => name.as_str().rsplit('.').next().unwrap_or("Error").to_string(),
         e => e.to_string(),
     }
 }
 
-type Props = HashMap<String, OwnedValue>;
+type Settings = HashMap<String, HashMap<String, OwnedValue>>;
 
-fn get<T: TryFrom<OwnedValue>>(props: Option<&Props>, key: &str) -> Option<T> {
-    T::try_from(props?.get(key)?.try_clone().ok()?).ok()
+/// Saved Wi-Fi connections by SSID.
+fn known_connections(bus: &Connection) -> zbus::Result<HashMap<Vec<u8>, OwnedObjectPath>> {
+    let paths: Vec<OwnedObjectPath> =
+        Proxy::new(bus, NM, "/org/freedesktop/NetworkManager/Settings", SETTINGS)?.call("ListConnections", &())?;
+    let mut known = HashMap::new();
+    for path in paths {
+        let settings: Settings = Proxy::new(bus, NM, path.clone(), CONNECTION)?.call("GetSettings", &())?;
+        let ssid = settings
+            .get("802-11-wireless")
+            .and_then(|w| w.get("ssid"))
+            .and_then(|v| Vec::<u8>::try_from(v.try_clone().ok()?).ok());
+        if let Some(ssid) = ssid {
+            known.insert(ssid, path);
+        }
+    }
+    Ok(known)
+}
+
+fn device_state(code: u32) -> &'static str {
+    match code {
+        100 => "connected",
+        40..=90 => "connecting",
+        110 | 120 => "disconnecting",
+        30 => "disconnected",
+        _ => "unavailable",
+    }
 }
 
 fn read_state(bus: &Connection) -> zbus::Result<State> {
-    let objects = ObjectManagerProxy::builder(bus).destination(IWD)?.path("/")?.build()?.get_managed_objects()?;
-    let Some((device, ifaces)) = objects.iter().find(|(_, i)| i.contains_key("net.connman.iwd.Device")) else {
-        return Ok(State::default());
-    };
-    let station = ifaces.get("net.connman.iwd.Station");
+    let nm = nm(bus)?;
+    let devices: Vec<OwnedObjectPath> = nm.call("GetDevices", &())?;
+    let mut device = None;
+    for path in devices {
+        let kind: u32 = Proxy::new(bus, NM, path.clone(), DEVICE)?.get_property("DeviceType")?;
+        if kind == DEVICE_TYPE_WIFI {
+            device = Some(path);
+            break;
+        }
+    }
+    let Some(device) = device else { return Ok(State::default()) };
+
+    let dev = Proxy::new(bus, NM, device.clone(), DEVICE)?;
+    let wireless = Proxy::new(bus, NM, device.clone(), WIRELESS)?;
     let mut state = State {
         available: true,
-        powered: get(ifaces.get("net.connman.iwd.Device"), "Powered").unwrap_or(false),
-        scanning: get(station, "Scanning").unwrap_or(false),
-        state: get(station, "State").unwrap_or_default(),
+        powered: nm.get_property("WirelessEnabled").unwrap_or(false),
+        scanning: false,
+        state: device_state(dev.get_property("State").unwrap_or(0)).into(),
         networks: Vec::new(),
-        device: Some(device.clone()),
+        device: Some(device),
     };
-    if station.is_none() {
+    if !state.powered {
         return Ok(state);
     }
 
-    let proxy = Proxy::new(bus, IWD, device.as_ref(), "net.connman.iwd.Station")?;
-    let ordered: Vec<(OwnedObjectPath, i16)> = proxy.call("GetOrderedNetworks", &())?;
-    for (path, rssi) in ordered {
-        let props = objects.get(&path).and_then(|i| i.get("net.connman.iwd.Network"));
-        state.networks.push(Network {
-            name: get(props, "Name").unwrap_or_default(),
-            kind: get(props, "Type").unwrap_or_default(),
-            known: get(props, "KnownNetwork"),
-            connected: get(props, "Connected").unwrap_or(false),
-            bars: agm_shell::status::bars(rssi),
+    let active: OwnedObjectPath = wireless.get_property("ActiveAccessPoint")?;
+    let active_ssid: Option<Vec<u8>> = (active.as_str() != "/")
+        .then(|| Proxy::new(bus, NM, active.clone(), AP).ok()?.get_property("Ssid").ok())
+        .flatten();
+    let known = known_connections(bus).unwrap_or_default();
+    let aps: Vec<OwnedObjectPath> = wireless.call("GetAllAccessPoints", &())?;
+
+    let mut best: HashMap<Vec<u8>, (u8, Network)> = HashMap::new();
+    for path in aps {
+        let ap = Proxy::new(bus, NM, path.clone(), AP)?;
+        let ssid: Vec<u8> = ap.get_property("Ssid")?;
+        if ssid.is_empty() {
+            continue;
+        }
+        let strength: u8 = ap.get_property("Strength").unwrap_or(0);
+        let flags: u32 = ap.get_property("Flags").unwrap_or(0);
+        let wpa: u32 = ap.get_property("WpaFlags").unwrap_or(0);
+        let rsn: u32 = ap.get_property("RsnFlags").unwrap_or(0);
+        let kind = if (wpa | rsn) & KEY_MGMT_802_1X != 0 {
+            "8021x"
+        } else if flags & AP_FLAGS_PRIVACY != 0 || wpa | rsn != 0 {
+            "psk"
+        } else {
+            "open"
+        };
+        if best.get(&ssid).is_some_and(|(s, _)| *s >= strength) {
+            continue;
+        }
+        let network = Network {
+            name: String::from_utf8_lossy(&ssid).into_owned(),
+            kind: kind.into(),
+            bars: agm_shell::status::bars_percent(strength),
+            known: known.get(&ssid).cloned(),
+            connected: active_ssid.as_ref() == Some(&ssid),
             path,
-        });
+        };
+        best.insert(ssid, (strength, network));
     }
+    let mut networks: Vec<(u8, Network)> = best.into_values().collect();
+    networks.sort_by(|a, b| b.1.connected.cmp(&a.1.connected).then(b.0.cmp(&a.0)));
+    state.networks = networks.into_iter().map(|(_, n)| n).collect();
     Ok(state)
 }

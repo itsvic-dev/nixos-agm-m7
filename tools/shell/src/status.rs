@@ -1,5 +1,5 @@
-use zbus::blocking::{Connection, Proxy, fdo::ObjectManagerProxy};
-use zbus::zvariant::{OwnedObjectPath, OwnedValue};
+use zbus::blocking::{Connection, Proxy};
+use zbus::zvariant::OwnedObjectPath;
 
 pub struct Battery {
     pub percent: u8,
@@ -33,45 +33,37 @@ pub fn battery() -> Option<Battery> {
     Some(Battery { percent, charging })
 }
 
-const IWD: &str = "net.connman.iwd";
+const NM: &str = "org.freedesktop.NetworkManager";
 
 fn wifi(bus: &Connection) -> zbus::Result<Option<Wifi>> {
-    let objects = ObjectManagerProxy::builder(bus).destination(IWD)?.path("/")?.build()?.get_managed_objects()?;
-
-    let prop = |path: &OwnedObjectPath, iface: &str, name: &str| -> Option<OwnedValue> {
-        objects.get(path)?.get(iface)?.get(name).and_then(|v| v.try_clone().ok())
-    };
-
-    for (path, ifaces) in &objects {
-        let Some(station) = ifaces.get("net.connman.iwd.Station") else { continue };
-        let connected = station.get("State").and_then(|v| String::try_from(v.try_clone().ok()?).ok());
-        if connected.as_deref() != Some("connected") {
+    let nm = Proxy::new(bus, NM, "/org/freedesktop/NetworkManager", NM)?;
+    let devices: Vec<OwnedObjectPath> = nm.call("GetDevices", &())?;
+    for path in devices {
+        let device = Proxy::new(bus, NM, path.clone(), "org.freedesktop.NetworkManager.Device")?;
+        let kind: u32 = device.get_property("DeviceType")?;
+        let state: u32 = device.get_property("State")?;
+        if kind != 2 || state != 100 {
             continue;
         }
-        let Some(network) = station
-            .get("ConnectedNetwork")
-            .and_then(|v| OwnedObjectPath::try_from(v.try_clone().ok()?).ok())
-        else {
+        let wireless = Proxy::new(bus, NM, path, "org.freedesktop.NetworkManager.Device.Wireless")?;
+        let ap: OwnedObjectPath = wireless.get_property("ActiveAccessPoint")?;
+        if ap.as_str() == "/" {
             continue;
-        };
-        let name = prop(&network, "net.connman.iwd.Network", "Name")
-            .and_then(|v| String::try_from(v).ok())
-            .unwrap_or_default();
-
-        let proxy = Proxy::new(bus, IWD, path.as_ref(), "net.connman.iwd.Station")?;
-        let ordered: Vec<(OwnedObjectPath, i16)> = proxy.call("GetOrderedNetworks", &())?;
-        let rssi = ordered.iter().find(|(p, _)| *p == network).map(|(_, r)| *r);
-        return Ok(Some(Wifi { name, bars: rssi.map_or(0, bars) }));
+        }
+        let ap = Proxy::new(bus, NM, ap, "org.freedesktop.NetworkManager.AccessPoint")?;
+        let ssid: Vec<u8> = ap.get_property("Ssid")?;
+        let strength: u8 = ap.get_property("Strength").unwrap_or(0);
+        return Ok(Some(Wifi { name: String::from_utf8_lossy(&ssid).into_owned(), bars: bars_percent(strength) }));
     }
     Ok(None)
 }
 
-pub fn bars(rssi: i16) -> u8 {
-    match rssi {
-        r if r >= -6000 => 4,
-        r if r >= -6700 => 3,
-        r if r >= -7400 => 2,
-        r if r >= -8000 => 1,
+pub fn bars_percent(strength: u8) -> u8 {
+    match strength {
+        s if s >= 75 => 4,
+        s if s >= 55 => 3,
+        s if s >= 35 => 2,
+        s if s >= 15 => 1,
         _ => 0,
     }
 }
