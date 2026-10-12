@@ -81,6 +81,14 @@ in
     ];
   };
 
+  nixpkgs.overlays = [
+    (final: prev: {
+      sway-unwrapped = prev.sway-unwrapped.overrideAttrs (old: {
+        patches = (old.patches or [ ]) ++ [ ./patches/sway-im-popup-no-text-input.patch ];
+      });
+    })
+  ];
+
   programs.sway = {
     enable = true;
     xwayland.enable = false;

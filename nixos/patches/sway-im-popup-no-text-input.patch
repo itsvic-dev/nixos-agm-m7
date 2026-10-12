@@ -1,0 +1,11 @@
+--- a/sway/input/text_input.c	2026-10-12 14:49:36
++++ b/sway/input/text_input.c	2026-10-12 14:49:36
+@@ -127,7 +127,7 @@
+ 	struct sway_text_input *text_input =
+ 		relay_get_focused_text_input(popup->relay);
+ 
+-	if (!popup->desc.relative) {
++	if (!popup->desc.relative || !text_input) {
+ 		return;
+ 	}
+ 
