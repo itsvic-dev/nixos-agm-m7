@@ -195,6 +195,11 @@ LK turns on the panel and the path OVL0 -> RDMA0 -> DBI0 (mutex 0). The panel ha
 - `/dev/mem` is blocked (strict devmem), so the modem memory can only be read from a kernel driver.
 - Stock start order (LineageOS dmesg): `ccci_mdinit` starts the modem through an ioctl, the modem sends control message `0x5555FFFF` over CCIF, the AP sends the runtime data, then `ccci_fsd` serves NVRAM files from `nvdata`.
 
+## Networking
+
+- NetworkManager with `wifi.backend = "iwd"`. iwd keeps its own profiles in `/var/lib/iwd`; NetworkManager imported them. `usb0` stays with systemd-networkd and is unmanaged in NetworkManager.
+- The modem starts at boot from `ccci-fsd.service`. It works on a copy of the NVRAM in `/var/lib/ccci-fs/data`; the phone's own partitions are mounted read-only.
+
 ## Hardware status
 
 | Part | Status |
