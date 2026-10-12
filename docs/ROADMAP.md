@@ -53,6 +53,7 @@ Nothing. Pick from the follow-ups.
 - T9: learn new words, number mode for number fields (`content_type`), keep `wvkbd` keys out of T9.
 - GPU: HWR recovery after a lockup, GLES 3 (needs transform feedback), hardware WebRender in Firefox, Sway on the GPU instead of pixman. See `GPU.md`.
 - SD card, Bluetooth, vibrator.
+- Audio: after many fast manual profile switches, PipeWire once kept the old sink node while the device reported the other profile (no output route). A WirePlumber restart fixed it; find the cause if it comes back.
 - Audio: check that the DAC/ADC clock gates really turn off when the DAPM supplies power down after the AFE has suspended.
 - Power: system suspend (s2idle or deep, wake on keys, charger and RTC), the deeper stock idle states (SODI, deep idle; need the SPM firmware), EEM adaptive CPU voltages.
 - Sway: find why the first `output * power on` after `power off` fails in wlroots, then drop the second call in the idle script.
