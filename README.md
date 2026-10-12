@@ -18,7 +18,7 @@ Mainline Linux and NixOS on the AGM M7, a rugged keypad phone with a MediaTek MT
 | Power off | Y | Through the PMIC. With USB connected, the phone starts offline charging |
 | PMIC (MT6357): regulators, RTC, auxadc | Partial | `regulator_ignore_unused` on the cmdline. RTC reads a wrong year |
 | Keypad, power key | Y | All 22 keys. Hold the hang-up key for a reset |
-| Display | Partial | DRM and fbcon work. The driver reuses the panel setup from the bootloader. No backlight control |
+| Display | Partial | DRM and fbcon work. The driver reuses the panel setup from the bootloader. PWM backlight, panel sleep when the screen is off |
 | Battery | Partial | `mt6357-charger` fuel gauge: voltage, current, temperature, coulomb counting from an OCV start value. Status comes from the gauge current |
 | Charger | Partial | External HL7005 on I2C1 (`hl7005`): 4.20 V, input limit 500 mA, watchdog, 0 to 45 °C limit. No USB charger type detection, so always 500 mA input |
 | Touchscreen | Y | Telink TLSC6x at I2C0 0x38, works with `edt-ft5x06` (FT6x36 layout) |
@@ -90,6 +90,9 @@ From a running NixOS, LineageOS is not needed:
 - SSH: `ssh root@172.16.42.1`. The phone gives the host 172.16.42.2 over DHCP.
 - Serial: `/dev/cu.usbmodem*` (macOS) or `/dev/ttyACM*` (Linux), with root autologin.
 - The screen runs Sway (pixman renderer) as `user`, with the `foot` terminal and Firefox. The keypad and the touchscreen both work.
+- The home screen (`agm-home`) shows the time, the date, the battery and Wi-Fi. After 20 s idle the screen dims, after 30 s it locks and turns off. Any key turns it on.
+- The keyguard (`agm-lock`): Menu then `*` unlocks. Menu then `*` also locks from anywhere.
+- Brightness: `brightnessctl set 50%`.
 - Keys in Sway: the left soft key opens the `fuzzel` launcher, the right soft key shows or hides the `wvkbd` on-screen keyboard, the call key moves the focus to the next window, and the hang-up key closes the window.
 - Text input (`t9`) in a text field:
   - 2 to 9 type a word. `*` (or the D-pad up and down) selects the next word. A long press types the digit.
@@ -106,10 +109,9 @@ From a running NixOS, LineageOS is not needed:
 - `nixos/`: NixOS modules. `patches/` has the Mesa patches for the GE8100.
 - `pkgs/`: package expressions for the kernel, the `boot.img` parts and `dmctl`.
 - `scripts/`: build, flash, deploy and test helpers. `scripts/re/` has LK and boot.img analysis helpers.
-- `tools/`: device-mapper helpers, GPU firmware analysis scripts, Vulkan and PowerVR test programs, and the `t9` input method.
+- `tools/`: device-mapper helpers, GPU firmware analysis scripts, Vulkan and PowerVR test programs, the `t9` input method, and the home screen and keyguard (`shell`, Rust).
 - `stock/`: decompiled stock DT and ODM DTBO.
 
 ## Planned
 
-- Display backlight control.
 - More in `docs/ROADMAP.md`.

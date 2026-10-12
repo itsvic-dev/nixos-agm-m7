@@ -48,7 +48,7 @@ Nothing. Pick from the follow-ups.
 - eMMC HS400: find the strobe delay register in the MSDC0 pad macro (0x11cd0000) and give `mtk-sd` an MT6739 entry for it. A failed HS400 tuning leaves the eMMC unusable, so test with care. HS200 already gives most of the speed.
 - NixOS: clean shutdown of the loop-mounted root.
 - `MEMCG` crashes in `__refill_obj_stock` when systemd loads BPF.
-- Display: backlight control (`disp_pwm0`), panel power and init without LK, TE or a vblank event, DBI frame-done IRQ instead of polling.
+- Display: panel power and init without LK, TE or a vblank event, DBI frame-done IRQ instead of polling.
 - macOS sometimes does not create the USB network interface. A cable replug fixes it.
 - T9: learn new words, number mode for number fields (`content_type`), keep `wvkbd` keys out of T9.
 - GPU: HWR recovery after a lockup, GLES 3 (needs transform feedback), hardware WebRender in Firefox, Sway on the GPU instead of pixman. See `GPU.md`.

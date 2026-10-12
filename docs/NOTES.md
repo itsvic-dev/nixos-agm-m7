@@ -111,6 +111,8 @@ LK turns on the panel and the path OVL0 -> RDMA0 -> DBI0 (mutex 0). The panel ha
 - The mode comes from DBI `ROI_SIZE` (0x06c), which LK sets to 240x320.
 - LK's framebuffer is at 0x77ee0000 (`atag,videolfb`, `mblock-4-framebuffer`, no-map). `/dev/mem` reaches it only through mmap (`devmem`), not `dd`.
 - The DBI register layout is the same as the vendor `mt6771/dispsys/ddp_reg_dbi.h`.
+- Backlight: `disp_pwm` (0x1100e000) on GPIO85 (function 1), the MT8183 register layout. The ODM DTBO sets `lcd-backlight` to `led_mode 5` (BLS PWM). LK leaves GPIO85 as a plain GPIO, driven high, with the PWM off. `disp_pwm_sel` runs at 104 MHz from `univpll2_d4` (LineageOS uses 26 MHz).
+- The backlight node has a phandle, so `pwm-backlight` stays off until the display driver enables it. `mt6739-dbi` does that in `enable`, and in `disable` it sends DCS display off and sleep in (single commands go to `SCMD0`). `enable` sends sleep out, waits 120 ms and sends display on.
 
 ## I2C and touch
 
@@ -125,6 +127,9 @@ LK turns on the panel and the path OVL0 -> RDMA0 -> DBI0 (mutex 0). The panel ha
 - labwc (replaced by Sway): a systemd service on tty1 (`PAMName=login`, user `user`), `WLR_RENDERER=pixman`. Autostart: `wvkbd-mobintl -H 130` and `foot` (DejaVu Sans Mono, size 6). `wvkbd`'s `-L` is the landscape height; portrait uses `-H`.
 - Weston (not used): Weston 15 kiosk shell with `foot`. Weston's desktop shell crashed (SIGSEGV in `weston_desktop_xdg_surface_destroy`) after a protocol error from `weston-terminal`. Weston's on-screen keyboard needs `text-input-v1` clients (only its demo apps) and does not fit 240 px.
 - Our DRM device has no vblank support, so the atomic helpers fake the flip-done events. Compositors work with that.
+- Sway 1.12 / wlroots 0.20: the first `output * power on` after `power off` fails ("Backend commit failed") with no kernel commit and no wlroots error. The second one works, so swayidle sends it twice.
+- `agm-home` is a background layer surface. It reads `/dev/input/event*` for the Menu then `*` lock combo, so it does not take keys away from Sway. `agm-lock` uses `ext-session-lock-v1`, so no input reaches the session while it runs.
+- iwd allows D-Bus access only for root and `wheel`. A small policy lets `user` call `GetManagedObjects` and `GetOrderedNetworks`.
 
 ## T9 input method
 
