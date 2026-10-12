@@ -120,6 +120,13 @@ LK turns on the panel and the path OVL0 -> RDMA0 -> DBI0 (mutex 0). The panel ha
 - Both states stop the local timer. The SYST timer (0x10017000, SPI 186, 13 MHz) is the broadcast device (`mtk-clkevt`).
 - With `NO_HZ_IDLE` and the `menu` governor, the idle cores spend about 95% of the time in cluster off.
 
+## CPU frequency
+
+- LK leaves the CPU at about 950 MHz (ARMPLL_LL PCW 0x1244EC, post-divider 2) with Vproc 1.15 V and Vsram 1.25 V.
+- The vendor driver picks the OPP table from the `atag,devinfo` efuse words in `/chosen`: segment `data[30]` and turbo `data[29]` bits 21:20. This phone has segment 0xad and turbo 3, so CPU level 0, the "FY" table: 299 MHz at 0.95 V to 1274 MHz at 1.306 V.
+- `mediatek-cpufreq` drives it. ARMPLL_LL: CON0 0x1000c200, PCW in CON1 bits 21:0 (14 fraction bits), post-divider in bits 26:24. The CPU mux is in TOPCKGEN_AO (0x1001b000) bits 11:8: 0 = clk26m, 1 = ARMPLL. clk26m is the intermediate clock during PLL changes.
+- Vsram = Vproc + 100 mV, clamped to 1.15..1.3125 V (vendor rule). Mainline `mt6357-regulator` had the wrong VOSEL mask (0x7f00 instead of 0x7f) for both VSRAM LDOs, so Vsram did not change. Fixed in our tree.
+
 ## I2C and touch
 
 - MT6739 I2C uses the v1 register layout plus `LTIMING` at 0x2c. The vendor driver also sets `CLOCK_DIV` (low byte only), the `IO_CONFIG` "AED" field (0x1f << 4) and leaves `DCM_EN` at 0xe. We copy that.
