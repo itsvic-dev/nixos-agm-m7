@@ -89,12 +89,12 @@ From a running NixOS, LineageOS is not needed:
 
 - SSH: `ssh root@172.16.42.1`. The phone gives the host 172.16.42.2 over DHCP.
 - Serial: `/dev/cu.usbmodem*` (macOS) or `/dev/ttyACM*` (Linux), with root autologin.
-- The screen runs Sway (pixman renderer) as `user`, with the `foot` terminal and Firefox. The keypad and the touchscreen both work.
+- The screen runs Sway (pixman renderer) as `user`, with the `foot` terminal and Firefox. The keypad and the touchscreen both work. Each app runs full screen on its own workspace; the home screen is workspace 1. The status bar (`agm-bar`) shows Wi-Fi, the time and the battery.
 - The home screen (`agm-home`) shows the time, the date, the battery and Wi-Fi. After 20 s idle the screen dims, after 30 s it locks and turns off. Any key turns it on.
 - The keyguard (`agm-lock`): Menu then `*` unlocks. Menu then `*` also locks from anywhere.
 - Settings app (`agm-settings`, in the menu): Wi-Fi (on/off, scan, connect with a password typed through t9, forget), brightness and idle delays, battery, date and time (time zone, 24-hour clock), storage and phone info. Brightness also works with `brightnessctl set 50%`.
 - Power: cpuidle (core and cluster power-down) and cpufreq (299 to 1274 MHz, `schedutil`).
-- Keys in Sway: the left soft key opens the app menu (`agm-menu`: D-pad and OK, or 1 to 9; Back closes it), the side key (F11) shows or hides the `wvkbd` on-screen keyboard, the right soft key goes to the app as Back, the call key moves the focus to the next window, and the hang-up key closes the window.
+- Keys in Sway: the left soft key opens the app menu (`agm-menu`: D-pad and OK, or 1 to 9; Back closes it), the side key (F11) shows or hides the `wvkbd` on-screen keyboard, the right soft key goes to the app as Back, the call key switches to the next app (and the home screen), and the hang-up key closes the window.
 - Text input (`t9`) in a text field:
   - 2 to 9 type a word. `*` (or the D-pad up and down) selects the next word. A long press types the digit.
   - 0 types a space. 1 types punctuation, and 1 again selects the next mark.
