@@ -1,0 +1,44 @@
+diff --git a/src/egl/drivers/dri2/platform_wayland.c b/src/egl/drivers/dri2/platform_wayland.c
+index cdc790b..dd2cb0a 100644
+--- a/src/egl/drivers/dri2/platform_wayland.c
++++ b/src/egl/drivers/dri2/platform_wayland.c
+@@ -3262,7 +3262,25 @@ dri2_initialize_wayland_swrast(_EGLDisplay *disp)
+    if (!dri2_create_screen(disp))
+       goto cleanup;
+ 
+-   if (!dri2_setup_device(disp, disp->Options.ForceSoftware)) {
++   bool software = disp->Options.ForceSoftware;
++   if (disp->Options.Zink && dri2_dpy->fd_render_gpu < 0) {
++      drmDevicePtr devices[8];
++      int num_devices = drmGetDevices2(0, devices, ARRAY_SIZE(devices));
++      for (int i = 0; i < num_devices && dri2_dpy->fd_render_gpu < 0; i++) {
++         if (devices[i]->available_nodes & (1 << DRM_NODE_RENDER))
++            dri2_dpy->fd_render_gpu =
++               loader_open_device(devices[i]->nodes[DRM_NODE_RENDER]);
++      }
++      if (num_devices > 0)
++         drmFreeDevices(devices, num_devices);
++      if (dri2_dpy->fd_render_gpu >= 0) {
++         software = !dri2_setup_device(disp, false);
++         close(dri2_dpy->fd_render_gpu);
++         dri2_dpy->fd_render_gpu = -1;
++      }
++   }
++
++   if (software && !dri2_setup_device(disp, true)) {
+       _eglError(EGL_NOT_INITIALIZED, "DRI2: failed to setup EGLDevice");
+       goto cleanup;
+    }
+diff --git a/src/egl/main/eglapi.c b/src/egl/main/eglapi.c
+index fb5a8b6..97650fa 100644
+--- a/src/egl/main/eglapi.c
++++ b/src/egl/main/eglapi.c
+@@ -704,7 +704,7 @@ eglInitialize(EGLDisplay dpy, EGLint *major, EGLint *minor)
+                success = _eglDriver.Initialize(disp);
+             }
+             if (!success) {
+-               disp->Options.Zink = EGL_FALSE;
++               disp->Options.Zink = env && !strcmp(env, "zink");
+                disp->Options.ForceSoftware = EGL_TRUE;
+                if (!_eglDriver.Initialize(disp))
+                   RETURN_EGL_ERROR(disp, EGL_NOT_INITIALIZED, EGL_FALSE);

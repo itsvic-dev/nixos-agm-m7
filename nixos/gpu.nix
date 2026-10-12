@@ -5,15 +5,18 @@
     (final: prev: {
       mesa =
         (prev.mesa.override {
-          galliumDrivers = [ ];
+          galliumDrivers = [ "zink" ];
           vulkanDrivers = [ "imagination" ];
           vulkanLayers = [ ];
           eglPlatforms = [ "wayland" ];
         }).overrideAttrs
           (old: {
-            patches = old.patches ++ [ ./patches/mesa-ge8100.patch ];
-            # No Gallium drivers and no rusticl, so there is nothing to add an RPATH to.
-            postFixup = builtins.replaceStrings [ "patchelf --add-rpath" ] [ "true" ] old.postFixup;
+            patches = old.patches ++ [
+              ./patches/mesa-ge8100.patch
+              ./patches/mesa-zink-shm.patch
+            ];
+            # rusticl is not built.
+            postFixup = builtins.replaceStrings [ "$opencl/lib/libRusticlOpenCL.so" ] [ "" ] old.postFixup;
             # Dozen is not built, so nothing lands in this output.
             postInstall = old.postInstall + ''
               mkdir -p $spirv2dxil
@@ -23,13 +26,9 @@
               (lib.mesonBool "teflon" false)
               (lib.mesonOption "video-codecs" "")
               (lib.mesonEnable "xlib-lease" false)
-              (lib.mesonBool "opengl" false)
-              (lib.mesonEnable "egl" false)
+              (lib.mesonBool "draw-use-llvm" false)
               (lib.mesonEnable "glx" false)
-              (lib.mesonEnable "gbm" false)
-              (lib.mesonEnable "glvnd" false)
               (lib.mesonEnable "gles1" false)
-              (lib.mesonEnable "gles2" false)
               (lib.mesonEnable "gallium-va" false)
               (lib.mesonBool "gallium-extra-hud" false)
             ];
@@ -43,6 +42,7 @@
     PVR_I_WANT_A_BROKEN_VULKAN_DRIVER = "1";
     # Sway renders with pixman, so present through wl_shm from a linear image.
     MESA_VK_WSI_DEBUG = "sw,linear";
+    MESA_LOADER_DRIVER_OVERRIDE = "zink";
   };
 
   environment.systemPackages = [
