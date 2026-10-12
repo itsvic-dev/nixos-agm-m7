@@ -19,12 +19,20 @@ let
   brightnessctl = "${pkgs.brightnessctl}/bin/brightnessctl";
   swaymsg = "${config.programs.sway.package}/bin/swaymsg";
 
+  # Save only a brighter level, so a restore never brings back the dim one.
+  dim = pkgs.writeShellScript "sway-dim" ''
+    level=$(( $(${brightnessctl} m) * 30 / 100 ))
+    if [ "$(${brightnessctl} g)" -gt "$level" ]; then
+      ${brightnessctl} -s set "$level"
+    fi
+  '';
+
   # The first "power on" after "power off" fails in wlroots without an error; the second one works.
   idle = pkgs.writeShellScript "sway-idle" ''
     # Sway may have restarted while the screen was dimmed.
     ${brightnessctl} -r || true
     exec ${pkgs.swayidle}/bin/swayidle -w \
-      timeout 20 '${brightnessctl} -s set 30%' resume '${brightnessctl} -r' \
+      timeout 20 '${dim}' resume '${brightnessctl} -r' \
       timeout 30 '${shell}/bin/agm-lock & ${swaymsg} "output * power off"' \
         resume '${swaymsg} "output * power on"; ${swaymsg} "output * power on"'
   '';
