@@ -189,7 +189,7 @@ index a70748f..2f99a9f 100644
  
     pvr_csb_pack (&ppp_state[2], TA_STATE_TERMINATE1, term1) {
 diff --git a/src/imagination/vulkan/pvr_arch_job_render.c b/src/imagination/vulkan/pvr_arch_job_render.c
-index 5ce4260..974e03c 100644
+index 5ce4260..3379729 100644
 --- a/src/imagination/vulkan/pvr_arch_job_render.c
 +++ b/src/imagination/vulkan/pvr_arch_job_render.c
 @@ -127,10 +127,18 @@ void pvr_arch_rt_mtile_info_init(const struct pvr_device_info *dev_info,
@@ -215,3 +215,16 @@ index 5ce4260..974e03c 100644
        /* Set up 16 macrotiles with a multiple of 2x2 tiles per macrotile,
         * which is aligned to a tile group.
         */
+@@ -1109,7 +1117,11 @@ static void pvr_frag_state_stream_init(struct pvr_render_ctx *ctx,
+          break;
+ 
+       case ROGUE_CR_ZLS_FORMAT_TYPE_16BITINT:
+-         value.value = _mesa_float_to_unorm(depth_clear, 16);
++         if (PVR_GET_FEATURE_VALUE(dev_info, simple_parameter_format_version,
++                                   0) == 1)
++            value.value = fui(depth_clear);
++         else
++            value.value = _mesa_float_to_unorm(depth_clear, 16);
+          break;
+ 
+       case ROGUE_CR_ZLS_FORMAT_TYPE_24BITINT:
