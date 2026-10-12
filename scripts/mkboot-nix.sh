@@ -29,5 +29,5 @@ python3 "$here/scripts/mkboot.py" \
 	-o "$out/boot.img"
 size=$(wc -c < "$out/boot.img")
 max=25165824
-[ "$size" -le "$max" ] || { echo "boot.img is $size bytes, recovery holds $max"; exit 1; }
+[ "$size" -le "$max" ] || { echo "boot.img is $size bytes, the boot partition holds $max"; exit 1; }
 ls -l "$out/boot.img"

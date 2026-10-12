@@ -4,7 +4,7 @@ Findings are in `NOTES.md`. This file tracks what is done and what is next.
 
 ## Done
 
-- Boot: LK loads our `boot.img` from `recovery`, ODM overlay sink, pstore earlycon, early watchdog.
+- Boot: LK loads our `boot.img` from `boot` (LineageOS is in `recovery`), ODM overlay sink, pstore earlycon, early watchdog.
 - Restart through the `mtk_wdt` restart handler.
 - Clocks, pinctrl, GPIO, EINT.
 - USB gadget: serial shell and ECM networking.
@@ -20,7 +20,7 @@ Findings are in `NOTES.md`. This file tracks what is done and what is next.
 - I2C0 and I2C1, touchscreen, HL7005 charger.
 - Flake builds the kernel (from GitHub) and `boot.img` parts. NixOS systemd initrd replaces the busybox initramfs.
 - Graphical session: Sway (pixman) with `foot`, the `agm-menu` launcher and Firefox. The `wvkbd` on-screen keyboard stays hidden until the side key (F11) shows it.
-- Fast test loop: flash `recovery` from NixOS and `reboot recovery` through the RTC boot flag.
+- Fast test loop: flash `boot` from NixOS and reboot.
 - Wi-Fi: CONSYS bring-up and the vendor gen2 driver in staging, with iwd (see `WIFI.md`).
 - GPU: vendor DDK 1.9 firmware on the mainline `powervr` driver, Mesa Vulkan 1.2, and GL 2.1 / GLES 2.0 through Zink (see `GPU.md`).
 
@@ -32,11 +32,10 @@ Findings are in `NOTES.md`. This file tracks what is done and what is next.
 
 Modem (MD1, `MOLY_LR12A_R2_MP_V96_6`) as a data-only LTE modem:
 
-1. Boot our image from `boot` and LineageOS from `recovery`. LK loads and starts the modem only in normal boot; in recovery mode it turns the modem off.
-2. Spike driver: modem power-on and the CCIF handshake (first control message `0x5555FFFF`).
-3. Rust tool for the NVRAM file service (`ccci_fsd` protocol) on a copy of `nvdata`.
-4. CLDMA queues and an AT port (`AT+CPIN?`, `AT+COPS?`).
-5. Raw-IP network device (ccmni) and an LTE data session through AT commands.
+1. Spike driver: modem power-on and the CCIF handshake (first control message `0x5555FFFF`).
+2. Rust tool for the NVRAM file service (`ccci_fsd` protocol) on a copy of `nvdata`.
+3. CLDMA queues and an AT port (`AT+CPIN?`, `AT+COPS?`).
+4. Raw-IP network device (ccmni) and an LTE data session through AT commands.
 
 Reference: vendor `eccci` and `ccci_util` in `ref/lumi-mt6739`, mainline `t7xx` for the CLDMA and WWAN structure.
 
@@ -44,11 +43,11 @@ Reference: vendor `eccci` and `ccci_util` in `ref/lumi-mt6739`, mainline `t7xx` 
 
 - Root on an SD card (MSDC1, mainline `mtk-sd`). It keeps USB free for serial and networking, and the encrypted `userdata` image can go.
 - USB host mode: VBUS boost in the HL7005 driver (`OPA_MODE`) and role switching through the WUSB3801. Host mode removes USB serial and networking while in use.
-- Shrink the initrd (OpenSSL, libxml2, Kerberos and more are still in), so `boot.img` has more room in `recovery`.
+- Shrink the initrd (OpenSSL, libxml2, Kerberos and more are still in), so `boot.img` has more room in `boot`.
 - Drop the `userdata` encryption once updating and reflashing from NixOS is reliable. Reformatting `userdata` deletes the LineageOS data, so ask first.
 - Remove `regulator_ignore_unused` from the cmdline. First find which regulators must stay on.
 - RTC: Linux reads the date as 2069-12-31. Check the year mapping against the stock driver (base year 1968).
-- Offline charging: LK boots the `boot` partition (LineageOS) with the charger mode. There, Android init finds no `/system` binaries (no healthd, no charger UI), so the screen keeps LK's picture. The battery still charges. A long press gets out of it. Fix it when NixOS replaces `boot`: handle `androidboot.mode=charger` in NixOS.
+- Offline charging: LK boots the `boot` partition (now NixOS) with the charger mode. Handle `androidboot.mode=charger` in NixOS (a small charging screen instead of the full session).
 - auxadc: `batt_v` reads garbage and some channels time out.
 - Charger: BC1.2 charger type detection for higher currents on wall chargers.
 - Remove `clk_ignore_unused` from the cmdline.

@@ -21,15 +21,17 @@ LK loads at 0x46000000. Facts found by disassembly:
 
 ## Test loop
 
+Our `boot.img` is in `boot` (`mmcblk0p25`). The stock LineageOS boot image is in `recovery` (`mmcblk0p2`). LK loads and starts the modem only in normal boot; in recovery mode it turns the modem off. A normal reboot or a watchdog reset boots NixOS. LineageOS boots only with `reboot recovery`.
+
 1. Boot LineageOS (GSI). Root is `phh-su -c`.
 2. `scripts/build.sh` in the `agm-m7` OrbStack VM, then `KERNEL=vm scripts/mkboot-nix.sh` on the host.
-3. `scripts/test-recovery.sh <name>` writes `out/boot.img` to `recovery`, runs `adb reboot recovery`, waits for LineageOS, and copies pstore to `logs/<name>/`.
+3. `scripts/test-boot.sh <name>` writes `out/boot.img` to `boot`, runs `adb reboot`, waits for LineageOS, and copies pstore to `logs/<name>/`.
 
-`fastboot flash recovery out/boot.img` also works.
+`fastboot flash boot out/boot.img` also works.
 
-Faster, from a running NixOS: `scripts/nixos-flash.sh` copies `out/boot.img` over SSH, writes it to `recovery` (`mmcblk0p2`), and runs `systemctl reboot --reboot-argument=recovery`. About 50 s per round trip.
+Faster, from a running NixOS: `scripts/nixos-flash.sh` copies `out/boot.img` over SSH, writes it to `boot`, and runs `systemctl reboot`. About 50 s per round trip.
 
-- `reboot recovery`: the RTC driver sets `RTC_PDN1` bit 4 and triggers `WRTGR`, as the vendor kernel does. LK boots `recovery` once and clears the bit. `reboot bootloader` sets bit 13 (fastboot).
+- `reboot recovery`: the RTC driver sets `RTC_PDN1` bit 4 and triggers `WRTGR`, as the vendor kernel does. LK boots `recovery` (LineageOS) once and clears the bit. `reboot bootloader` sets bit 13 (fastboot).
 - The USB gadget needs fixed MAC addresses (`g_cdc.dev_addr`, `g_cdc.host_addr`). With random ones, macOS often does not create the network interface after a reboot.
 
 ## Debug without UART
@@ -64,7 +66,7 @@ PSCI `SYSTEM_RESET` and `SYSTEM_OFF` both hang in the ATF. The watchdog is stopp
 - `flake.nix` builds NixOS 26.05 for aarch64 on the Rosetta builder. The kernel and the initramfs still come from `boot.img` (`boot.kernel.enable = false`, `boot.initrd.enable = false`).
 - `scripts/nixos-push.sh` builds the root image, grows it to 4 GB on the Mac (Android's `truncate` and `resize2fs` cannot), and copies it to `/data/nixos.img`.
 - To grow the running root: `fallocate -l <size> /mnt/data/nixos.img`, `losetup -c /dev/loop0`, then the `EXT4_IOC_RESIZE_FS` ioctl on `/` (`resize2fs` cannot open the busy loop device). A full root makes the phone's auto-GC delete paths during `nix copy`, which shows up as "path ... is not valid".
-- `scripts/nixos-deploy.sh [boot|switch]` copies a new system closure over SSH and sets the system profile. `/sbin/init` in the image points to that profile, so `boot` takes effect at the next boot from `recovery`.
+- `scripts/nixos-deploy.sh [boot|switch]` copies a new system closure over SSH and sets the system profile. `/sbin/init` in the image points to that profile, so `boot` takes effect at the next boot.
 - `ssh root@172.16.42.1`. `ttyGS0` has a root autologin. systemd-networkd gives the Mac 172.16.42.2 over DHCP.
 - The kernel needs `NETDEVICES` (else `SO_BINDTODEVICE` fails and networkd, resolved and sshd break) and nftables. `MEMCG` crashes the kernel when systemd loads BPF programs, so it stays off.
 - At shutdown, systemd cannot unmount `/mnt/data`, because the root image is on it.
@@ -167,7 +169,7 @@ LK turns on the panel and the path OVL0 -> RDMA0 -> DBI0 (mutex 0). The panel ha
 - `init=/nix/var/nix/profiles/system/init`: the initrd resolves the symlink inside the new root, so `nixos-deploy.sh boot` is enough for userspace changes.
 - Store paths in initrd unit scripts are not copied into the initrd. Use `boot.initrd.systemd.extraBin` (`dmctl` failed with status 127).
 - A device-mapper device created without libdevmapper's udev handshake gets `SYSTEMD_READY=0` (on `add` events always). systemd then stops everything that depends on it. `99-zz-userdata.rules` sets it ready.
-- The initrd is 81 MB unpacked. With xz and without TPM2, FIDO2 and LVM it is 17 MB, and `boot.img` 22.4 MB. `recovery` holds 24 MiB.
+- The initrd is 81 MB unpacked. With xz and without TPM2, FIDO2 and LVM it is 17 MB, and `boot.img` 22.4 MB. `boot` and `recovery` hold 24 MiB each.
 - NixOS sets `loglevel=4`, which hides most messages from the pstore console. We use `boot.consoleLogLevel = 8`.
 - Debug: `systemd.log_target=kmsg systemd.journald.forward_to_kmsg=1` on the command line puts the whole initrd log into pstore. `systemd.debug_shell=ttyGS0` did not give a shell on the USB serial port.
 
@@ -182,6 +184,14 @@ LK turns on the panel and the path OVL0 -> RDMA0 -> DBI0 (mutex 0). The panel ha
 - Playback route: `ADDA_DL_CH1 DL1_CH1`, `ADDA_DL_CH2 DL1_CH2`, then `Line Out Source` (speaker) or `Handset Source` (earpiece) = `Playback`. Capture: `PGA L/R Mux` = AIN0, `UL1_CH1 ADDA_UL_CH1`, `UL1_CH2 ADDA_UL_CH2`, PCM `hw:0,2`.
 - NixOS: PipeWire with WirePlumber and our UCM profile (`nixos/ucm2`, card driver `AGM_M7`): one sink with the Speaker and Earpiece routes, one Main Microphone source. `ALSA_CONFIG_UCM2` points to a merged copy of `alsa-ucm-conf`, because overriding that package rebuilds `alsa-lib` and everything that uses it. At the default 40 % volume the line out is at -10 dB and the rest is software volume. PipeWire and WirePlumber use about 18 MB RSS. WirePlumber needs a few seconds after login before the card shows up.
 - Speaker and Earpiece share one PCM, so PipeWire makes them separate profiles ("HiFi (Mic, Speaker)" and "HiFi (Earpiece, Mic)"), not ports of one sink. Settings > Sound switches the output with `wpctl set-profile` and then polls until the new sink is there (1-2 s). Each output keeps its own volume; a new one starts at 40 %.
+
+## Modem
+
+- Firmware: `md1img` holds one `md1rom` (`MOLY_LR12A_R2_MP_V96_6`, not encrypted). `md1dsp` is the DSP image.
+- LK loads both, sets the remap and the EMI MPU, and passes `ccci,modem_info_v2` in `/chosen`. It does this only in normal boot. In recovery mode it logs "recovery mode, no need load modem" and turns the modem off.
+- Reserved memory from LK in normal boot: `mblock-8-ccci` 0x62000000-0x71ffffff (256 MiB, mapped), `mblock-7-ccci` 0x72000000-0x720fffff (shared memory, nomap), `mblock-9-ccci` 0x76000000-0x76bfffff (nomap). The stock kernel frees about 200 MiB of `mblock-8` that the modem does not use. We do not yet, so NixOS has 714 MiB instead of about 970 MiB.
+- `/dev/mem` is blocked (strict devmem), so the modem memory can only be read from a kernel driver.
+- Stock start order (LineageOS dmesg): `ccci_mdinit` starts the modem through an ioctl, the modem sends control message `0x5555FFFF` over CCIF, the AP sends the runtime data, then `ccci_fsd` serves NVRAM files from `nvdata`.
 
 ## Hardware status
 

@@ -2,7 +2,7 @@
 set -euo pipefail
 here=$(cd "$(dirname "$0")/.." && pwd)
 export PATH=$HOME/Library/Android/sdk/platform-tools:$PATH
-name=${1:?usage: test-recovery.sh <log name>}
+name=${1:?usage: test-boot.sh <log name>}
 logs=$here/logs/$name
 mkdir -p "$logs"
 
@@ -15,11 +15,11 @@ wait_adb() {
 
 wait_adb
 adb push "$here/out/boot.img" /data/local/tmp/agm-boot.img >/dev/null
-adb shell "phh-su -c 'dd if=/data/local/tmp/agm-boot.img of=/dev/block/platform/bootdevice/by-name/recovery bs=1M conv=fsync' && echo flashed" | grep -q flashed ||
-	{ echo "flashing recovery failed"; exit 1; }
+adb shell "phh-su -c 'dd if=/data/local/tmp/agm-boot.img of=/dev/block/platform/bootdevice/by-name/boot bs=1M conv=fsync' && echo flashed" | grep -q flashed ||
+	{ echo "flashing boot failed"; exit 1; }
 
 ls /dev/cu.usbmodem* 2>/dev/null > "$logs/usb-before.txt" || true
-adb reboot recovery
+adb reboot
 start=$(date +%s)
 IFS=$'\n' read -r -d '' -a cmds <<< "${USB_CMDS:-$'uname -a\nreboot -f'}" || true
 if [ -n "${USB:-}" ]; then
@@ -28,6 +28,7 @@ if [ -n "${USB:-}" ]; then
 fi
 eval "${AFTER_USB:-true}"
 sleep 10
+echo "waiting for LineageOS: it boots only with reboot recovery"
 wait_adb
 echo "back in LineageOS after $(( $(date +%s) - start ))s"
 sleep 5
