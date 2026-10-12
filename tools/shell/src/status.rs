@@ -26,7 +26,7 @@ impl Status {
     }
 }
 
-fn battery() -> Option<Battery> {
+pub fn battery() -> Option<Battery> {
     let read = |f: &str| std::fs::read_to_string(format!("/sys/class/power_supply/battery/{f}")).ok();
     let percent = read("capacity")?.trim().parse().ok()?;
     let charging = matches!(read("status").as_deref().map(str::trim), Some("Charging" | "Full"));

@@ -2,7 +2,7 @@ use std::io::Read;
 use std::process::Command;
 use std::time::{Duration, Instant};
 
-use agm_shell::{Face, SoftKeys, pids, status::Status, wl::present};
+use agm_shell::{pids, shell::Shell, status::Status, theme::DARK, wl::present};
 use chrono::{Local, Timelike};
 use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState},
@@ -44,7 +44,7 @@ struct Home {
     pool: SlotPool,
     layer: LayerSurface,
     size: (u32, u32),
-    face: Face,
+    shell: Shell,
     bus: Option<zbus::blocking::Connection>,
     status: Status,
 }
@@ -53,8 +53,9 @@ impl Home {
     fn draw(&mut self) {
         let (w, h) = self.size;
         let Some(mut pm) = Pixmap::new(w, h) else { return };
-        let keys = SoftKeys { left: "Menu", right: "" };
-        self.face.draw(&mut pm, Local::now(), &self.status, &keys, None);
+        self.shell.wallpaper(&mut pm);
+        self.shell.clock_face(&mut pm, 0.0, &self.status, Local::now(), false);
+        self.shell.soft_keys(&mut pm, &DARK, "Menu", "");
         present(&mut self.pool, self.layer.wl_surface(), &pm);
     }
 
@@ -92,7 +93,7 @@ fn main() {
         shm,
         layer,
         size: (0, 0),
-        face: Face::load(),
+        shell: Shell::load(),
         status: Status::read(bus.as_ref()),
         bus,
     };

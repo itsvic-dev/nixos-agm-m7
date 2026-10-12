@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-use agm_shell::{Face, SoftKeys, status::Status, wl::present};
+use agm_shell::{shell::{BAR, Shell}, status::Status, theme::DARK, wl::present};
 use chrono::Local;
 use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState},
@@ -46,7 +46,7 @@ struct Lock {
     lock: Option<SessionLock>,
     surfaces: Vec<(SessionLockSurface, (u32, u32))>,
     keyboard: Option<wl_keyboard::WlKeyboard>,
-    face: Face,
+    shell: Shell,
     bus: Option<zbus::blocking::Connection>,
     status: Status,
     menu_at: Option<Instant>,
@@ -56,12 +56,15 @@ struct Lock {
 impl Lock {
     fn draw(&mut self) {
         let combo = self.menu_at.is_some_and(|t| t.elapsed() < COMBO);
-        let hint = if combo { "Now press *" } else { "Press Menu, then * to unlock" };
-        let keys = SoftKeys { left: "Unlock", right: "" };
+        let hint = if combo { "Now press *" } else { "Press Menu, then *" };
         let now = Local::now();
         for (surface, (w, h)) in &self.surfaces {
             let Some(mut pm) = Pixmap::new(*w, *h) else { continue };
-            self.face.draw(&mut pm, now, &self.status, &keys, Some(hint));
+            self.shell.wallpaper(&mut pm);
+            self.shell.status_bar(&mut pm, &self.status, now);
+            self.shell.clock_face(&mut pm, BAR, &self.status, now, true);
+            self.shell.hint(&mut pm, hint);
+            self.shell.soft_keys(&mut pm, &DARK, "Unlock", "");
             present(&mut self.pool, surface.wl_surface(), &pm);
         }
     }
@@ -113,7 +116,7 @@ fn main() {
         lock: None,
         surfaces: Vec::new(),
         keyboard: None,
-        face: Face::load(),
+        shell: Shell::load(),
         status: Status::read(bus.as_ref()),
         bus,
         menu_at: None,

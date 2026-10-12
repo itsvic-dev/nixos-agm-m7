@@ -27,6 +27,7 @@ chrono = { version = "0.4", default-features = false, features = ["clock"] }
 smithay-client-toolkit = { version = "0.21", default-features = false, features = ["calloop", "xkbcommon"] }
 tiny-skia = { version = "0.12", default-features = false, features = ["std", "simd", "png-format"] }
 zbus = { version = "5", default-features = false, features = ["blocking-api", "async-io"] }
+resvg = { version = "0.48.1", default-features = false }
 
 [profile.release]
 lto = true

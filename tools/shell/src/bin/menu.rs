@@ -1,10 +1,16 @@
 use std::collections::HashSet;
 use std::os::unix::process::CommandExt;
-use std::path::{Path, PathBuf};
+use std::collections::HashMap;
+use std::path::Path;
 use std::process::Command;
 use std::time::Duration;
 
-use agm_shell::{Face, SOFT_KEY_BAR, SoftKeys, fill, pids, rounded_rect, wl::present};
+use agm_shell::draw::{image, rect, ring, rounded};
+use agm_shell::icons::data_dirs;
+use agm_shell::shell::{SOFT_KEY_BAR, Shell};
+use agm_shell::text::Weight;
+use agm_shell::theme::{DARK, WHITE};
+use agm_shell::{pids, wl::present};
 use calloop::signals::{Signal, Signals};
 use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState},
@@ -37,7 +43,7 @@ use smithay_client_toolkit::{
     },
     shm::{Shm, ShmHandler, slot::SlotPool},
 };
-use tiny_skia::{Color, FilterQuality, Paint, Pixmap, PixmapPaint, Rect, Shader, Transform};
+use tiny_skia::{Pixmap, Rect};
 
 const KEY_ENTER: u32 = 28;
 const KEY_UP: u32 = 103;
@@ -52,28 +58,14 @@ const KEY_9: u32 = 10;
 
 const COLS: usize = 3;
 const ROWS: usize = 3;
-const HEADER: f32 = 26.0;
-const ICON: f32 = 40.0;
-
-// Catppuccin Mocha.
-const TEXT: [u8; 3] = [0xcd, 0xd6, 0xf4];
-const OVERLAY: [u8; 3] = [0x93, 0x99, 0xb2];
-const LAVENDER: [u8; 3] = [0xb4, 0xbe, 0xfe];
-const SURFACE: [u8; 3] = [0x45, 0x47, 0x5a];
-const CRUST: [u8; 3] = [0x11, 0x11, 0x1b];
-const ACCENTS: [[u8; 3]; 5] = [
-    [0xcb, 0xa6, 0xf7],
-    [0x89, 0xb4, 0xfa],
-    [0xa6, 0xe3, 0xa1],
-    [0xfa, 0xb3, 0x87],
-    [0x94, 0xe2, 0xd5],
-];
+const HEADER: f32 = 30.0;
+const ICON: u32 = 40;
 
 struct App {
     name: String,
     exec: String,
     terminal: bool,
-    icon: Option<Pixmap>,
+    icon: Option<String>,
 }
 
 struct Menu {
@@ -88,7 +80,7 @@ struct Menu {
     keyboard: Option<wl_keyboard::WlKeyboard>,
     touch: Option<wl_touch::WlTouch>,
     touched: Option<(i32, usize)>,
-    face: Face,
+    shell: Shell,
     apps: Vec<App>,
     selected: usize,
     scroll: usize,
@@ -107,51 +99,40 @@ impl Menu {
     fn draw(&mut self) {
         let (w, h) = self.size;
         let Some(mut pm) = Pixmap::new(w, h) else { return };
-        let face = &self.face;
-        face.background(&mut pm);
-        let rgba = |c: [u8; 3], a: u8| Color::from_rgba8(c[0], c[1], c[2], a);
-        fill(&mut pm, Rect::from_xywh(0.0, 0.0, w as f32, h as f32).unwrap(), rgba(CRUST, 120));
-        fill(&mut pm, Rect::from_xywh(0.0, 0.0, w as f32, HEADER).unwrap(), rgba(CRUST, 140));
-
-        let title = self.apps.get(self.selected).map_or("No apps", |a| &a.name);
-        let title = face.fit(14.0, title, w as f32 - 16.0);
-        face.label(&mut pm, 14.0, w as f32 / 2.0, 18.0, TEXT, &title);
+        pm.fill(agm_shell::draw::rgba(DARK.bg, 255));
+        let fonts = &self.shell.fonts;
+        fonts.draw(&mut pm, Weight::SemiBold, 14.0, 12.0, 21.0, DARK.text, "Apps");
 
         for k in 0..COLS * ROWS {
-            let Some(app) = self.apps.get(self.scroll * COLS + k) else { break };
+            let index = self.scroll * COLS + k;
+            let Some(app) = self.apps.get(index) else { break };
             let cell = self.cell(k);
             let cx = cell.left() + cell.width() / 2.0;
+            let size = ICON as f32;
+            let top = (cell.top() + (cell.height() - size - 16.0) / 2.0).round();
+            let left = (cx - size / 2.0).round();
+            let selected = index == self.selected;
 
-            if self.scroll * COLS + k == self.selected {
-                let outer = Rect::from_xywh(cell.left() + 3.0, cell.top() + 2.0, cell.width() - 6.0, cell.height() - 4.0).unwrap();
-                let inner = Rect::from_xywh(outer.left() + 1.5, outer.top() + 1.5, outer.width() - 3.0, outer.height() - 3.0).unwrap();
-                rounded_rect(&mut pm, outer, 11.0, &solid(rgba(LAVENDER, 255)));
-                rounded_rect(&mut pm, inner, 9.5, &solid(rgba(SURFACE, 230)));
+            if selected {
+                ring(&mut pm, rect(left - 4.0, top - 4.0, size + 8.0, size + 8.0), 15.0, 2.0, DARK.accent, DARK.bg);
             }
-
-            let top = (cell.top() + (cell.height() - ICON - 16.0) / 2.0).round();
-            let left = (cx - ICON / 2.0).round();
-            match &app.icon {
-                Some(icon) => {
-                    let scale = ICON / icon.width().max(icon.height()) as f32;
-                    let paint = PixmapPaint { quality: FilterQuality::Bicubic, ..Default::default() };
-                    let t = Transform::from_row(scale, 0.0, 0.0, scale, left, top);
-                    pm.draw_pixmap(0, 0, icon.as_ref(), &paint, t, None);
-                }
+            let icon = app.icon.as_deref().and_then(|name| self.shell.icons.get(name, ICON, None));
+            match icon {
+                Some(icon) => image(&mut pm, icon, left, top),
                 None => {
-                    let accent = ACCENTS[app.name.bytes().map(usize::from).sum::<usize>() % ACCENTS.len()];
-                    rounded_rect(&mut pm, Rect::from_xywh(left, top, ICON, ICON).unwrap(), 10.0, &solid(rgba(accent, 255)));
-                    let letter: String = app.name.chars().take(1).collect::<String>().to_uppercase();
-                    face.label(&mut pm, 22.0, cx, top + 28.0, CRUST, &letter);
+                    rounded(&mut pm, rect(left, top, size, size), 12.0, DARK.separator, 255);
+                    let letter = app.name.chars().take(1).collect::<String>().to_uppercase();
+                    self.shell.fonts.draw_centered(&mut pm, Weight::SemiBold, 18.0, cx, top + 27.0, WHITE, &letter);
                 }
             }
 
-            let name = face.fit(11.0, &app.name, cell.width() - 8.0);
-            face.label(&mut pm, 11.0, cx, top + ICON + 13.0, TEXT, &name);
-            face.label(&mut pm, 9.0, cell.left() + 10.0, cell.top() + 13.0, OVERLAY, &(k + 1).to_string());
+            let fonts = &self.shell.fonts;
+            let color = if selected { DARK.accent } else { DARK.text };
+            let name = fonts.fit(Weight::Medium, 10.5, &app.name, cell.width() - 6.0);
+            fonts.draw_centered(&mut pm, Weight::Medium, 10.5, cx, top + size + 15.0, color, &name);
         }
 
-        face.soft_keys(&mut pm, &SoftKeys { left: "Open", right: "Back" });
+        self.shell.soft_keys(&mut pm, &DARK, "Open", "Back");
         present(&mut self.pool, self.layer.wl_surface(), &pm);
     }
 
@@ -209,10 +190,6 @@ impl Menu {
     }
 }
 
-fn solid(color: Color) -> Paint<'static> {
-    Paint { shader: Shader::SolidColor(color), anti_alias: true, ..Default::default() }
-}
-
 fn current_mode() -> String {
     let out = Command::new(env!("AGM_SWAYMSG")).args(["-t", "get_binding_state"]).output();
     let json = out.map(|o| String::from_utf8_lossy(&o.stdout).into_owned()).unwrap_or_default();
@@ -220,14 +197,7 @@ fn current_mode() -> String {
     if mode == "menu" { "default".into() } else { mode.into() }
 }
 
-fn data_dirs() -> Vec<PathBuf> {
-    let home = std::env::var("HOME").unwrap_or_default();
-    let data_home = std::env::var("XDG_DATA_HOME").unwrap_or(format!("{home}/.local/share"));
-    let dirs = std::env::var("XDG_DATA_DIRS").unwrap_or("/run/current-system/sw/share".into());
-    std::iter::once(data_home.as_str()).chain(dirs.split(':')).filter(|d| !d.is_empty()).map(PathBuf::from).collect()
-}
-
-fn load_apps(hidden: &HashSet<String>) -> Vec<App> {
+fn load_apps(hidden: &HashSet<String>, names: &HashMap<String, String>) -> Vec<App> {
     let dirs = data_dirs();
     let mut seen = HashSet::new();
     let mut apps = Vec::new();
@@ -240,7 +210,10 @@ fn load_apps(hidden: &HashSet<String>) -> Vec<App> {
             if !id.ends_with(".desktop") || !seen.insert(id.clone()) || hidden.contains(&id) {
                 continue;
             }
-            if let Some(app) = parse_desktop(&path, &dirs) {
+            if let Some(mut app) = parse_desktop(&path) {
+                if let Some(name) = names.get(&id) {
+                    app.name = name.clone();
+                }
                 apps.push(app);
             }
         }
@@ -249,7 +222,7 @@ fn load_apps(hidden: &HashSet<String>) -> Vec<App> {
     apps
 }
 
-fn parse_desktop(path: &Path, dirs: &[PathBuf]) -> Option<App> {
+fn parse_desktop(path: &Path) -> Option<App> {
     let text = std::fs::read_to_string(path).ok()?;
     let mut in_entry = false;
     let mut get = std::collections::HashMap::new();
@@ -276,23 +249,8 @@ fn parse_desktop(path: &Path, dirs: &[PathBuf]) -> Option<App> {
         name: get.get("Name")?.clone(),
         exec,
         terminal: yes("Terminal"),
-        icon: get.get("Icon").and_then(|name| find_icon(name, dirs)),
+        icon: get.get("Icon").cloned(),
     })
-}
-
-fn find_icon(name: &str, dirs: &[PathBuf]) -> Option<Pixmap> {
-    if name.starts_with('/') {
-        return Pixmap::load_png(name).ok();
-    }
-    let sizes = ["64x64", "48x48", "96x96", "128x128", "256x256", "32x32"];
-    dirs.iter()
-        .flat_map(|d| {
-            sizes
-                .iter()
-                .map(move |s| d.join(format!("icons/hicolor/{s}/apps/{name}.png")))
-                .chain(std::iter::once(d.join(format!("pixmaps/{name}.png"))))
-        })
-        .find_map(|p| Pixmap::load_png(p).ok())
 }
 
 fn main() {
@@ -305,10 +263,19 @@ fn main() {
     }
 
     let mut hidden = HashSet::new();
+    let mut names = HashMap::new();
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
-        if arg == "--hide" {
-            hidden.extend(args.next());
+        match (arg.as_str(), args.next()) {
+            ("--hide", Some(id)) => {
+                hidden.insert(id);
+            }
+            ("--name", Some(rename)) => {
+                if let Some((id, name)) = rename.split_once('=') {
+                    names.insert(id.to_string(), name.to_string());
+                }
+            }
+            _ => {}
         }
     }
 
@@ -338,8 +305,8 @@ fn main() {
         keyboard: None,
         touch: None,
         touched: None,
-        face: Face::load(),
-        apps: load_apps(&hidden),
+        shell: Shell::load(),
+        apps: load_apps(&hidden, &names),
         selected: 0,
         scroll: 0,
         mode: current_mode(),

@@ -5,7 +5,7 @@ mod wifi;
 use std::time::{Duration, Instant};
 
 use agm_shell::config::{self, Config};
-use agm_shell::{Face, SoftKeys, pids, wl::present};
+use agm_shell::{pids, shell::Shell, wl::present};
 use chrono::Local;
 use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState},
@@ -106,7 +106,7 @@ struct App {
     ti_entered: bool,
     ti_enabled: bool,
     pending: Pending,
-    face: Face,
+    shell: Shell,
     stack: Vec<Frame>,
     wifi: wifi::Wifi,
     wifi_state: wifi::State,
@@ -203,13 +203,14 @@ impl App {
                 let storage = system::storage()
                     .first()
                     .map_or(String::new(), |(_, used, total)| format!("{} of {} used", system::size(*used), system::size(*total)));
+                let status = agm_shell::status::Status { battery: agm_shell::status::battery(), wifi: None };
                 vec![
-                    Row::new("Wi-Fi", wifi, Kind::Link),
-                    Row::new("Display", format!("Brightness {:.0}%", brightness() * 100.0), Kind::Link),
-                    Row::new("Battery", battery, Kind::Link),
-                    Row::new("Date & time", self.timezone(), Kind::Link),
-                    Row::new("Storage", storage, Kind::Link),
-                    Row::new("About phone", system::model().unwrap_or_default(), Kind::Link),
+                    Row::new("Wi-Fi", wifi, Kind::Link).icon("network-wireless-symbolic"),
+                    Row::new("Display", format!("Brightness {:.0}%", brightness() * 100.0), Kind::Link).icon("display-brightness-symbolic"),
+                    Row::new("Battery", battery, Kind::Link).icon(agm_shell::shell::battery_icon(&status)),
+                    Row::new("Date & time", self.timezone(), Kind::Link).icon("preferences-system-time-symbolic"),
+                    Row::new("Storage", storage, Kind::Link).icon("drive-harddisk-symbolic"),
+                    Row::new("About phone", system::model().unwrap_or_default(), Kind::Link).icon("help-about-symbolic"),
                 ]
             }
             Page::Wifi => {
@@ -315,9 +316,9 @@ impl App {
             selected: frame.selected.min(rows.len().saturating_sub(1)),
             scroll: frame.scroll,
             message: self.message.as_ref().map(|(m, _)| m.as_str()),
-            keys: SoftKeys { left: "", right: if self.stack.len() > 1 { "Back" } else { "Close" } },
+            right: if self.stack.len() > 1 { "Back" } else { "Close" },
         };
-        ui::draw(&self.face, &mut pm, &view);
+        ui::draw(&mut self.shell, &mut pm, &view);
         present(&mut self.pool, self.window.wl_surface(), &pm);
     }
 
@@ -668,7 +669,7 @@ fn main() {
         ti_entered: false,
         ti_enabled: false,
         pending: Pending::default(),
-        face: Face::load(),
+        shell: Shell::load(),
         stack: vec![Frame { page: Page::Root, selected: 0, scroll: 0 }],
         wifi: wifi::Wifi::start(wifi_tx),
         wifi_state: wifi::State::default(),
@@ -737,7 +738,7 @@ impl KeyboardHandler for App {
 impl TouchHandler for App {
     fn down(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_touch::WlTouch, _: u32, _: u32, _: wl_surface::WlSurface, id: i32, (x, y): (f64, f64)) {
         let (w, h) = self.size;
-        if y as f32 > h as f32 - agm_shell::SOFT_KEY_BAR {
+        if y as f32 > h as f32 - agm_shell::shell::SOFT_KEY_BAR {
             if x as f32 > w as f32 / 2.0 {
                 self.back();
             }
