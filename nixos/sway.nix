@@ -15,6 +15,19 @@ let
     bindsym XF86PowerOff kill
   '';
 
+  brightnessctl = "${pkgs.brightnessctl}/bin/brightnessctl";
+  swaymsg = "${config.programs.sway.package}/bin/swaymsg";
+
+  # The first "power on" after "power off" fails in wlroots without an error; the second one works.
+  idle = pkgs.writeShellScript "sway-idle" ''
+    # Sway may have restarted while the screen was dimmed.
+    ${brightnessctl} -r || true
+    exec ${pkgs.swayidle}/bin/swayidle -w \
+      timeout 20 '${brightnessctl} -s set 30%' resume '${brightnessctl} -r' \
+      timeout 30 '${swaymsg} "output * power off"' \
+        resume '${swaymsg} "output * power on"; ${swaymsg} "output * power on"'
+  '';
+
   status = pkgs.writeShellScript "sway-status" ''
     while :; do
       echo "$(cat /sys/class/power_supply/battery/capacity)%  $(date +%H:%M)"
@@ -44,6 +57,7 @@ let
       status_command ${status}
     }
 
+    exec ${idle}
     exec ${pkgs.wvkbd}/bin/wvkbd-mobintl --hidden -H 130
     exec ${pkgs.foot}/bin/foot
     exec ${t9}/bin/t9
@@ -68,7 +82,10 @@ in
   services.speechd.enable = lib.mkForce false;
   services.pipewire.enable = lib.mkForce false;
 
+  services.udev.packages = [ pkgs.brightnessctl ];
+
   environment.systemPackages = [
+    pkgs.brightnessctl
     pkgs.foot
     fuzzel
     pkgs.grim
