@@ -91,6 +91,11 @@ From a running NixOS, LineageOS is not needed:
 - Serial: `/dev/cu.usbmodem*` (macOS) or `/dev/ttyACM*` (Linux), with root autologin.
 - The screen runs Sway (pixman renderer) as `user`, with the `foot` terminal and Firefox. The keypad and the touchscreen both work.
 - Keys in Sway: the left soft key opens the `fuzzel` launcher, the right soft key shows or hides the `wvkbd` on-screen keyboard, the call key moves the focus to the next window, and the hang-up key closes the window.
+- Text input (`t9`) in a text field:
+  - 2 to 9 type a word. `*` (or the D-pad up and down) selects the next word. A long press types the digit.
+  - 0 types a space. 1 types punctuation, and 1 again selects the next mark.
+  - `#` cycles the modes (T9 Abc, T9 abc, multi-tap Abc, multi-tap abc, 123). A long press of `#` switches between English and Polish.
+  - The right soft key deletes. A long press shows or hides `wvkbd`.
 - `systemctl reboot` goes back to LineageOS. `systemctl reboot --reboot-argument=recovery` boots NixOS again.
 - If the initrd fails, it writes the failed units to the kernel log and reboots into LineageOS. `test-recovery.sh` or `cat /sys/fs/pstore/console-ramoops` then shows the log.
 
@@ -101,11 +106,10 @@ From a running NixOS, LineageOS is not needed:
 - `nixos/`: NixOS modules. `patches/` has the Mesa patches for the GE8100.
 - `pkgs/`: package expressions for the kernel, the `boot.img` parts and `dmctl`.
 - `scripts/`: build, flash, deploy and test helpers. `scripts/re/` has LK and boot.img analysis helpers.
-- `tools/`: device-mapper helpers, GPU firmware analysis scripts, and Vulkan and PowerVR test programs.
+- `tools/`: device-mapper helpers, GPU firmware analysis scripts, Vulkan and PowerVR test programs, and the `t9` input method.
 - `stock/`: decompiled stock DT and ODM DTBO.
 
 ## Planned
 
 - Display backlight control.
-- T9 text input for the keypad.
 - More in `docs/ROADMAP.md`.

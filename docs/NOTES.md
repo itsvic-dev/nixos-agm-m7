@@ -126,6 +126,15 @@ LK turns on the panel and the path OVL0 -> RDMA0 -> DBI0 (mutex 0). The panel ha
 - Weston (not used): Weston 15 kiosk shell with `foot`. Weston's desktop shell crashed (SIGSEGV in `weston_desktop_xdg_surface_destroy`) after a protocol error from `weston-terminal`. Weston's on-screen keyboard needs `text-input-v1` clients (only its demo apps) and does not fit 240 px.
 - Our DRM device has no vblank support, so the atomic helpers fake the flip-done events. Compositors work with that.
 
+## T9 input method
+
+- `tools/t9`: an `input-method-unstable-v2` client. It grabs the keyboard while a text field has focus, and sends the keys that it does not use back through `virtual-keyboard-unstable-v1`. `foot` and Firefox support `text-input-v3`.
+- Sway runs its key bindings before the input method grab. So `t9` switches Sway to a `text` mode without the `XF86Back` binding while a text field has focus, and back to `default` after.
+- The grab first sends a `no_keymap` keymap (format 0, size 0). wlroots answers a virtual keyboard keymap with size 0 with a `no_memory` error, which kills the client.
+- Sway forwards only the keys of the input method's own virtual keyboard past the grab. Keys from `wvkbd` also go through `t9`, so its digit keys type T9 letters.
+- Word lists: FrequencyWords (OpenSubtitles 2018, 50k words, CC-BY-SA 4.0). The English list splits contractions ("don" + "'t"), so `en-extra.txt` adds them.
+- `checks.aarch64-linux.t9` runs a headless Sway (pixman) in the build sandbox, types into `foot` through a virtual keyboard, and takes screenshots with `grim`.
+
 ## systemd initrd
 
 - LK puts `root=/dev/ram` on the kernel command line. Our part of the command line comes later and has `root=fstab`, which wins. Without a bootloader, NixOS's `boot.kernelParams` only reach the kernel through `boot.img`, so `boot-parts` writes them into `cmdline`.

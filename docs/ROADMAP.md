@@ -26,11 +26,11 @@ Findings are in `NOTES.md`. This file tracks what is done and what is next.
 
 ## Now
 
-Nothing. Pick from the follow-ups.
+- T9 input method (`tools/t9`): passes the headless Sway check, not yet tested on the phone.
 
 ## Next
 
-1. T9 input method for the keypad: multi-tap and predictive (T9) text entry as a Wayland input method (`input-method-unstable-v2`, which Sway supports), with word lists per language (English, Polish).
+Nothing. Pick from the follow-ups.
 
 ## Follow-ups
 
@@ -50,5 +50,6 @@ Nothing. Pick from the follow-ups.
 - `MEMCG` crashes in `__refill_obj_stock` when systemd loads BPF.
 - Display: backlight control (`disp_pwm0`), panel power and init without LK, TE or a vblank event, DBI frame-done IRQ instead of polling.
 - macOS sometimes does not create the USB network interface. A cable replug fixes it.
+- T9: learn new words, number mode for number fields (`content_type`), keep `wvkbd` keys out of T9.
 - GPU: HWR recovery after a lockup, GLES 3 (needs transform feedback), hardware WebRender in Firefox, load `powervr` at boot, Sway on the GPU instead of pixman. See `GPU.md`.
 - SD card, Bluetooth, audio, vibrator.
