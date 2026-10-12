@@ -8,7 +8,4 @@ export NIX_SSHOPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
 sys=$(nix build "$here#nixosConfigurations.agm-m7.config.system.build.toplevel" --no-link --print-out-paths)
 nix copy --no-check-sigs --to "ssh-ng://$host" "$sys"
-ssh $NIX_SSHOPTS "$host" "nix-env -p /nix/var/nix/profiles/system --set $sys"
-if [ "$mode" = switch ]; then
-	ssh $NIX_SSHOPTS "$host" "$sys/bin/switch-to-configuration switch"
-fi
+ssh $NIX_SSHOPTS "$host" "nix-env -p /nix/var/nix/profiles/system --set $sys && $sys/bin/switch-to-configuration $mode"
