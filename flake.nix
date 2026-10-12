@@ -34,11 +34,8 @@
       nixosConfigurations.agm-m7 = agm-m7;
       packages.aarch64-linux = {
         inherit kernel;
-        boot-parts = pkgs.callPackage ./pkgs/boot-parts.nix {
-          inherit (agm-m7.config.system.build) kernel;
-          initrd = agm-m7.config.system.build.initialRamdisk;
-          inherit (agm-m7.config.boot) kernelParams;
-        };
+        boot-parts = agm-m7.config.system.build.bootParts;
+        boot-img = agm-m7.config.system.build.bootImage;
         rootfs = agm-m7.config.system.build.rootfs;
         agm-shell = pkgs.callPackage ./tools/shell/package.nix { };
         ccci-fsd = pkgs.callPackage ./tools/ccci-fsd/package.nix { };

@@ -4,6 +4,7 @@
   imports = [
     "${modulesPath}/profiles/minimal.nix"
     ./kernel.nix
+    ./bootloader.nix
     ./rootfs.nix
     ./initrd.nix
     ./usb.nix

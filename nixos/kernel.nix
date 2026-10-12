@@ -15,6 +15,5 @@
 
   boot.consoleLogLevel = 8;
 
-  boot.loader.grub.enable = false;
-  boot.loader.initScript.enable = false;
+  boot.loader.agm-m7.enable = true;
 }
