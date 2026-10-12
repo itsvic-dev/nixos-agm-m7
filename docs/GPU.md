@@ -106,6 +106,16 @@ github.com/LgPWNd/Alcatel_mt6739_5059R_and_5041C_universal_kernel-4.4.95-,
 - Heaps: with BRN 65273 the firmware runs PDS and USC code relative to 0xA800000000 and 0xBA00000000, so the kernel reports the 1.9 heap layout (general 0x65C0000000, 2 GiB; transfer from 2 MiB, inside the first 1 GiB).
 - Still 0: `TPU`, `TPU_ARRAYS_CDM`, `COMPUTE_THREAD_BARRIER`, YUV coefficients. Not needed for this test.
 
+## Render (started)
+
+- `tools/vk-triangle` (installed as `vk-triangle`): render pass with a clear and a red triangle into a twiddled RGBA8 image, read back with a compute shader. `WIDTH`, `HEIGHT`, `RAW=1` (map the image memory and print it de-twiddled on the CPU), `clear` (no draw), `store` (compute store and readback only).
+- Kernel: 1.9 HWRT data (328 bytes), `RENDER_TARGET` and `RTA_CTL` objects; HWRT cleanup on the TA DM, then the 3D DM. TA (280 bytes) and 3D (664 bytes) commands are built from the mainline commands, the HWRT data and the static render state. The combined geometry and fragment kick does not exist in 1.9: the kernel sends a TA kick, then a 3D kick, each with the HWRT cleanup state.
+- The firmware detects the first TA kick from the HWRT state, not from the first-kick flag. All TE, PPP and ISP merge values in the HWRT go to registers unchanged. The firmware register use for TA, 3D and PM setup is in `docs/GPU-render-map.md`.
+- Mesa needs `max_partitions`, `usc_min_output_registers_per_pix` and `common_store_size_in_dwords` from the kernel. Without them it enables no USC partitions and the 3D job hangs (HWR on DM 3).
+- Simple parameter format 1: Mesa and mainline only handled the 2x2 tile groups of format 2. Both now use one macrotile over the whole render.
+- Status: the TA and 3D jobs run without HWR, and the clear and the triangle land at the right pixels. Open: only the top-left (width/2 x height/2) of the image is rendered. The ISP macrotile size, `ISP_RGN`, the TE screen, the ISP pipe count, the PBE size and the TPC size do not change this. The PBE clip works (a 15x15 clip gives 16x16 pixels).
+- Open: compute `imageStore`/`imageLoad` agree with each other but write outside the image. Mesa does the twiddle in the shader (`usclib_twiddle2d`).
+
 ## Plan
 
 1. Platform: MFG power domains, clocks and DT node. Read the core ID register. Done.
