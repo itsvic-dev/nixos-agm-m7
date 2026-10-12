@@ -32,7 +32,7 @@ Findings are in `NOTES.md`. This file tracks what is done and what is next.
 
 Modem (MD1, `MOLY_LR12A_R2_MP_V96_6`) as a data-only LTE modem:
 
-1. Spike driver: modem power-on and the CCIF handshake (first control message `0x5555FFFF`).
+1. Spike driver: modem power-on and the CCIF handshake. Done to the runtime data: HS1 and the runtime-data answer work (`mt6739-ccci`, debugfs `start`). Next: an RPC port (the MD asks op 0x4005 before HS2), then HS2.
 2. Rust tool for the NVRAM file service (`ccci_fsd` protocol) on a copy of `nvdata`.
 3. CLDMA queues and an AT port (`AT+CPIN?`, `AT+COPS?`).
 4. Raw-IP network device (ccmni) and an LTE data session through AT commands.
@@ -54,6 +54,7 @@ Reference: vendor `eccci` and `ccci_util` in `ref/lumi-mt6739`, mainline `t7xx` 
 - USB DMA (MUSB runs in PIO mode).
 - eMMC HS400: find the strobe delay register in the MSDC0 pad macro (0x11cd0000) and give `mtk-sd` an MT6739 entry for it. A failed HS400 tuning leaves the eMMC unusable, so test with care. HS200 already gives most of the speed.
 - NixOS: clean shutdown of the loop-mounted root.
+- Wi-Fi: CONSYS makes an EMI MPU write violation out of range at 0x40080400 at every boot (see `MODEM-RE.md` section 8).
 - `MEMCG` crashes in `__refill_obj_stock` when systemd loads BPF.
 - Display: panel power and init without LK, TE or a vblank event, DBI frame-done IRQ instead of polling.
 - macOS sometimes does not create the USB network interface. A cable replug fixes it.
