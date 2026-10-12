@@ -37,6 +37,7 @@
         boot-parts = agm-m7.config.system.build.bootParts;
         boot-img = agm-m7.config.system.build.bootImage;
         rootfs = agm-m7.config.system.build.rootfs;
+        sd-image = agm-m7.config.system.build.sdImage;
         agm-shell = pkgs.callPackage ./tools/shell/package.nix { };
         ccci-fsd = pkgs.callPackage ./tools/ccci-fsd/package.nix { };
         modemmanager-agm = pkgs.callPackage ./tools/mm-plugin-mtk-ccci/package.nix { };

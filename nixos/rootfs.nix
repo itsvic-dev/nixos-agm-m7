@@ -21,6 +21,17 @@ in
     '';
   };
 
+  # Root partition type root-arm64, which systemd-repart matches as Type=root.
+  system.build.sdImage = pkgs.runCommand "agm-m7-sd.img" { nativeBuildInputs = [ pkgs.util-linux ]; } ''
+    root=${config.system.build.rootfs}
+    size=$(stat -L -c %s $root)
+    truncate -s $(( size + 2 * 1024 * 1024 )) $out
+    echo "label: gpt
+    label-id: 6E6F7869-6167-4D37-A000-000000000001
+    start=2048, size=$(( size / 512 )), type=B921B045-1DF0-41C3-AF44-4C6F280D3FAE, uuid=6E6F7869-6167-4D37-A000-000000000002, name=nixos" | sfdisk -q $out
+    dd if=$root of=$out bs=1M seek=1 conv=notrunc status=none
+  '';
+
   systemd.services.nix-register-rootfs = {
     wantedBy = [ "multi-user.target" ];
     before = [
