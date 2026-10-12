@@ -77,6 +77,7 @@ PSCI `SYSTEM_RESET` and `SYSTEM_OFF` both hang in the ATF. The watchdog is stopp
 
 - The pwrap registers are the same as on MT6765, but the preloader also enables the INT1 interrupt group. The mainline MT6765 entry ignores INT1, and the pwrap interrupt then storms until the watchdog fires. The MT6739 entry turns INT1 off.
 - eMMC: Samsung eMMC 5.1 (`FN62BB`), HS200/HS400 at 1.8 V. The I/O voltage is fixed at 1.8 V, so no `vqmmc` is needed. Stock runs HS400 at 200 MHz. We run HS200 (192 MHz from `msdcpll`, about 156 MB/s raw, 120 to 140 MB/s through dm-crypt and the loop image; plain high-speed mode gave 44 MB/s). HS400 with `mt6779` registers fails: the strobe delay scan in `PAD_DS_TUNE` (base + 0x188) finds no working value, and the card is then not initialised at all. Stock maps a second block, the MSDC0 pad macro at 0x11cd0000, which probably holds the strobe delay.
+- microSD: MSDC1, `vmch` (3.3 V) as `vmmc`, `vmc` as `vqmmc` (switches to 1.8 V for UHS-I). There is no card detect line. The stock `cd-gpios` is GPIO15, but GPIO15 is keypad column 7, and the stock overlay sets `non-removable`. We do the same, so the kernel scans the slot once at boot. A 32 GB SDHC card runs SDR104 at 192 MHz: about 79 MB/s raw read, 22 MB/s in high-speed mode.
 - The PMIC interrupt is EINT 182 (virtual pin 168), level high.
 - The pwrap reset is infracfg `0x140` bit 0.
 - Long-press reset: the mainline keys driver turns it off unless the DT sets it. We keep the stock setting: one key, `power-off-time-sec = <0>`. MT6357 has the MT6331 layout of `TOP_RST_MISC` (0x14c): time bits 13:12, power-key reset enable bit 9, home-key bit 8. Stock value 0x221.
@@ -221,4 +222,5 @@ LK turns on the panel and the path OVL0 -> RDMA0 -> DBI0 (mutex 0). The panel ha
 | Charging | works (`hl7005`, external charger on I2C1) |
 | Userspace | NixOS 26.05 from `/data/nixos.img`, `labwc` session |
 | Audio (speaker, earpiece, main mic) | works (own MT6739 AFE, `mt6357`, `aw8738`) |
-| SD card, Wi-Fi, BT, modem, camera, GPU | not done |
+| microSD | works, SDR104, scanned only at boot |
+| Wi-Fi, BT, modem, camera, GPU | not done |
