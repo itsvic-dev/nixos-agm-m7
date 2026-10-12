@@ -1,4 +1,4 @@
-{ pkgs, modulesPath, ... }:
+{ config, pkgs, modulesPath, ... }:
 
 {
   imports = [
@@ -40,6 +40,12 @@
     dates = "daily";
     options = "--delete-older-than 3d";
   };
+  # We deploy many times a day, so age alone keeps too many generations on the small root image.
+  systemd.services.nix-gc.preStart = "${config.nix.package}/bin/nix-env -p /nix/var/nix/profiles/system --delete-generations +2";
+
+  # The phone never evaluates nixpkgs, so it does not need its 200 MB source.
+  nixpkgs.flake.setNixPath = false;
+  nixpkgs.flake.setFlakeRegistry = false;
 
   environment.systemPackages = with pkgs; [
     evtest
