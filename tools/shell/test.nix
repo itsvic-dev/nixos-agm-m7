@@ -16,12 +16,9 @@ let
   config = writeText "sway-test-config" ''
     output HEADLESS-1 resolution 240x320
     font pango:DejaVu Sans Mono 7
-    bar {
-      position top
-      height 14
-      font pango:DejaVu Sans Mono 7
-      status_command echo "87%  12:34"
-    }
+    default_border none
+    exec ${agm-shell}/bin/agm-windows
+    exec ${agm-shell}/bin/agm-bar
     exec ${agm-shell}/bin/agm-home
   '';
 
@@ -93,8 +90,8 @@ runCommand "agm-shell-test"
     wait $lock
     grim $out/unlocked.png
 
-    export XDG_DATA_DIRS=${foot}/share:${apps}/share
-    ${agm-shell}/bin/agm-menu --hide footclient.desktop --hide foot-server.desktop > $out/menu.log 2>&1 &
+    export XDG_DATA_DIRS=${foot}/share:${apps}/share:${agm-shell}/share
+    ${agm-shell}/bin/agm-menu --hide footclient.desktop --hide foot-server.desktop --name foot.desktop=Terminal > $out/menu.log 2>&1 &
     menu=$!
     sleep 1
     grim $out/menu.png
