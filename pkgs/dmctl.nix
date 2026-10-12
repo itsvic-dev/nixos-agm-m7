@@ -1,8 +1,11 @@
-{ pkgsStatic }:
+{ lib, pkgsStatic }:
 
 pkgsStatic.stdenv.mkDerivation {
   name = "dmctl";
-  src = ../tools;
+  src = lib.fileset.toSource {
+    root = ../tools;
+    fileset = ../tools/dmctl.c;
+  };
   dontConfigure = true;
   buildPhase = "$CC -O2 -static -Wall -o dmctl dmctl.c";
   installPhase = "install -D dmctl $out/bin/dmctl";
