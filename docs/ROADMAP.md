@@ -38,8 +38,9 @@ Modem (MD1, `MOLY_LR12A_R2_MP_V96_6`) as a data-only LTE modem:
 4. Done: CLDMA and the WWAN network device `wwan0`. LTE data works (bearer setup in `MODEM-RE.md` section 9).
 5. Done: `ccci-fsd.service` seeds `/var/lib/ccci-fs/data` from the read-only `nvdata`, `protect_f` and `protect_s` once, serves it, and starts the modem (`/sys/bus/platform/drivers/mt6739-ccci/*/state`).
 6. Done: NetworkManager with the iwd backend manages Wi-Fi; the settings app and the status bar use NetworkManager.
-7. Now: ModemManager plugin `mtk-ccci` (bearer with the MediaTek AT sequence), so mobile data is a NetworkManager connection. Then a mobile data toggle in Settings.
-8. Later: CCB control setup, modem power-off and restart, sequence check and status polling.
+7. Done: ModemManager plugin `mtk-ccci` (`tools/mm-plugin-mtk-ccci`). Mobile data is the NetworkManager connection `mobile` (APN `internet`, IPv4 only), metric 700 behind Wi-Fi. 57 Mbit/s down.
+8. Next: modem power-off and restart (driver and `state` attribute), so a crashed modem recovers without a phone reboot. ModemManager crashed the modem once (jump to 0) when it sent commands with the SIM still off.
+9. Then: mobile data toggle and signal in Settings and the status bar, IPv6 bearer, CCB control setup, sequence check and status polling.
 
 Reference: vendor `eccci` and `ccci_util` in `ref/lumi-mt6739`, mainline `t7xx` for the CLDMA and WWAN structure.
 

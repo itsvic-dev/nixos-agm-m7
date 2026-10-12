@@ -32,20 +32,23 @@ Errors are logged, but enabling continues.
 To connect with APN `<apn>`, user `<u>` and password `<p>`:
 
 ```
+AT+EAPNSET                           (clears the APN table)
 AT+EAPNSET="<apn>",1,"<u>","<p>"
 AT+EAPNSET="<apn>",2,"type=default,supl,hipri;protocol=IP;roaming_protocol=IP;authtype=<a>;carrier_enabled=1;max_conns=0;max_conns_time=0;wait_time=0;bearer_bitmask=2147352575;inactive_timer=0"
 AT+EIAAPN="<apn>",0                  (errors are ignored)
 AT+CGATT?                            (then AT+CGATT=1 if the modem is not attached)
 AT+EAPNACT=1,"<apn>","default",0     (timeout 60 s)
-AT+EPDN=<aid>,"ifst",20
 AT+EIF=<ifid>,"ifst","up",1
+AT+EPDN=<aid>,"ifst",20
 AT+CGCONTRDP
 ```
 
 - `<a>` is the Android authtype: 0 none, 1 PAP, 2 CHAP, 3 PAP or CHAP. If the auth type is not set, the plugin uses 2 when a user or password is set, else 0.
 - `<aid>` comes from `+CGEV: ME PDN ACT <aid>` or `+EPDN: <aid>, "new", ...`. If neither comes, the plugin finds the `+CGCONTRDP` entry whose APN starts with `<apn>`.
-- `<ifid>` and the IPv4 address come from `+EIF: <ifid>, ifup, 1, <ipv4>, 0` or `+EPDN: <aid>, "new", 1, <ifid>, <mtu>, <iptype>, "<ipv4>"`. The plugin waits up to 10 s for them after `+EPDN`.
+- `<ifid>` and the IPv4 address come from `+EIF: <ifid>, ifup, 1, <ipv4>, 0` or `+EPDN: <aid>, "new", 1, <ifid>, <mtu>, <iptype>, "<ipv4>"`. The plugin waits up to 10 s for them after `+EAPNACT`.
 - The ccmni index is `<ifid> % 100`. Only ccmni0 (`wwan0`) is supported. Other indexes fail the connection.
+- The modem answers `+EPDN` only after the `+EIF` confirmation. The stock netagent sends `+EIF` on a second AT channel; with one channel, `+EIF` must come first.
+- The `+EAPNSET` steps and `+EPDN` are not fatal. Adding an APN that is already in the table fails with `CME ERROR: 5841`.
 - `+CGCONTRDP` gives DNS and MTU.
 - If a step fails after `+EAPNACT=1`, the plugin sends `AT+EAPNACT=0,<aid>`.
 
