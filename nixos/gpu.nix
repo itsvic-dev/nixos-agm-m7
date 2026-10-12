@@ -36,6 +36,9 @@
     })
   ];
 
+  # Loaded by hand while the DDK 1.9 GPU firmware path is in development.
+  boot.blacklistedKernelModules = [ "powervr" ];
+
   hardware.graphics.enable = true;
 
   environment.sessionVariables = {

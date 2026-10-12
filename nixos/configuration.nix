@@ -1,16 +1,12 @@
-{
-  config,
-  lib,
-  pkgs,
-  modulesPath,
-  ...
-}:
+{ pkgs, modulesPath, ... }:
 
 {
   imports = [
     "${modulesPath}/profiles/minimal.nix"
+    ./kernel.nix
     ./rootfs.nix
     ./initrd.nix
+    ./usb.nix
     ./sway.nix
     ./vendor.nix
     ./wifi.nix
@@ -18,37 +14,13 @@
     ./gpu.nix
   ];
 
-  boot.loader.grub.enable = false;
-  boot.loader.initScript.enable = false;
-  # Built-in drivers only, so /proc/sys/kernel/modprobe does not exist.
-  system.activationScripts.modprobe = lib.mkForce "";
-  # Loaded by hand while the DDK 1.9 GPU firmware path is in development.
-  boot.blacklistedKernelModules = [ "powervr" ];
-
-
   networking.hostName = "agm-m7";
   time.timeZone = "Europe/Warsaw";
   networking.useNetworkd = true;
   networking.useDHCP = false;
-  systemd.network.networks."10-usb0" = {
-    matchConfig.Name = "usb0";
-    address = [ "172.16.42.1/24" ];
-    networkConfig.DHCPServer = true;
-    dhcpServerConfig = {
-      PoolOffset = 2;
-      PoolSize = 1;
-      EmitRouter = false;
-      EmitDNS = false;
-    };
-  };
   networking.nftables.enable = true;
-  networking.firewall.allowedUDPPorts = [ 67 ];
 
   services.getty.autologinUser = "root";
-  systemd.services."serial-getty@ttyGS0" = {
-    enable = true;
-    wantedBy = [ "getty.target" ];
-  };
 
   services.openssh.enable = true;
   users.users.root.openssh.authorizedKeys.keys = [
