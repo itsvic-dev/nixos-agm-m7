@@ -144,7 +144,11 @@ LK turns on the panel and the path OVL0 -> RDMA0 -> DBI0 (mutex 0). The panel ha
 - `agm-home` is a background layer surface. It reads `/dev/input/event*` for the Menu then `*` lock combo, so it does not take keys away from Sway. `agm-lock` uses `ext-session-lock-v1`, so no input reaches the session while it runs.
 - `agm-menu` reads `.desktop` files from `XDG_DATA_DIRS`. Sway binds the soft keys itself, so the menu switches Sway to the `menu` mode while it is open. Sway drops a mode without bindings, so `menu` has one (`XF86Send nop`).
 - Sway 1.12 crashed in `constrain_popup` when t9 committed its input method popup after its text field lost focus to the menu: the function has no NULL check for the focused text input. `nixos/patches/sway-im-popup-no-text-input.patch` adds it.
-- iwd allows D-Bus access only for root and `wheel`. A small policy lets `user` call `GetManagedObjects` and `GetOrderedNetworks`.
+- `agm-settings` is a normal xdg-shell window. It asks iwd for passphrases through its own agent object (`net.connman.iwd.Agent`): the app sets the passphrase before `Network.Connect`, so the agent answers at once. The password field uses `text-input-v3`, so t9 types into it.
+- Shared user settings are in `~/.config/agm/settings` (`clock_24h`, `dim_after`, `off_after`). The idle script runs swayidle in a loop with these delays; the settings app kills swayidle to apply new ones.
+- The time zone belongs to timedated now (`time.timeZone = null`, tmpfiles links `Europe/Warsaw` on a fresh root). A polkit rule lets `user` set it.
+- The display driver allocates 300 KB contiguous buffers. Without CMA (and without compaction) these allocations failed after some uptime, and Sway could not turn the screen back on ("Failed to create DRM dumb buffer: Cannot allocate memory"). The kernel now has a 32 MiB CMA pool.
+- iwd allows D-Bus access only for root and `wheel`. A small policy gives `user` access to iwd without `wheel`.
 
 ## T9 input method
 
