@@ -106,7 +106,7 @@ github.com/LgPWNd/Alcatel_mt6739_5059R_and_5041C_universal_kernel-4.4.95-,
 - Heaps: with BRN 65273 the firmware runs PDS and USC code relative to 0xA800000000 and 0xBA00000000, so the kernel reports the 1.9 heap layout (general 0x65C0000000, 2 GiB; transfer from 2 MiB, inside the first 1 GiB).
 - Still 0: `TPU`, `TPU_ARRAYS_CDM`, `COMPUTE_THREAD_BARRIER`, YUV coefficients. Not needed for this test.
 
-## Render (started)
+## Render (done)
 
 - `tools/vk-triangle` (installed as `vk-triangle`): render pass with a clear and a red triangle into a twiddled RGBA8 image, read back with a compute shader. `WIDTH`, `HEIGHT`, `RAW=1` (map the image memory and print it de-twiddled on the CPU), `clear` (no draw), `store` (compute store and readback only).
 - Kernel: 1.9 HWRT data (328 bytes), `RENDER_TARGET` and `RTA_CTL` objects; HWRT cleanup on the TA DM, then the 3D DM. TA (280 bytes) and 3D (664 bytes) commands are built from the mainline commands, the HWRT data and the static render state. The combined geometry and fragment kick does not exist in 1.9: the kernel sends a TA kick, then a 3D kick, each with the HWRT cleanup state.
@@ -127,10 +127,28 @@ github.com/LgPWNd/Alcatel_mt6739_5059R_and_5041C_universal_kernel-4.4.95-,
 ![vkcube on the GE8100](img/vkcube.png)
 
 - Screenshots: `scripts/screenshot.sh [file]`.
-- Open:
-  - Compute `imageStore`/`imageLoad` agree with each other but write outside the image (`usclib_twiddle2d`).
-  - Device features copied from the GE8300 and not verified: the vendor uses `max_partitions` 6 and `isp_max_tiles_in_flight` 2 (we have 10 and 4). USC store sizes and TPU and UVS values are unknown; `libusc.so` in `/vendor/lib` may have them.
-  - HWR recovery: after a 3D lockup the kernel does not answer the free list reconstruction request, so later jobs time out.
+
+## OpenGL through Zink
+
+- Mesa builds Zink, EGL, GBM and glvnd (`draw-use-llvm` off, so no LLVM at runtime). `MESA_LOADER_DRIVER_OVERRIDE=zink` is set system-wide.
+- Sway with pixman advertises no DRM device, so EGL has no render node. `nixos/patches/mesa-zink-shm.patch` keeps Zink on the `wl_shm` fallback and binds the EGL display to the first render node. Without the second part, Firefox sees a software EGL device and blocks acceleration.
+- Zink gives GL 2.1 and GLES 2.0: the driver has no transform feedback, which GL 3.0 and GLES 3.0 need. Other missing Zink features: `fillModeNonSolid`, `customBorderColorWithoutFormat`, most line modes.
+- D24 and D24S8 need a float depth clear too, like D16.
+- es2gears runs at about 9 FPS:
+
+![es2gears on Zink](img/zink-gears.png)
+
+- Firefox: WebGL 1 runs on the GPU. WebGL 2 needs GLES 3. WebRender stays in software (`gfx.webrender.software` in `nixos/firefox.nix`; gfxInfo also blocks it below GL 3).
+- With `MESA_GLES_VERSION_OVERRIDE=3.0` and the software pref removed, hardware WebRender starts, then locks the GPU (FWCCB 105 context reset, 104 free list reconstruction).
+- WebGPU (`dom.webgpu.enabled`): `requestAdapter()` returns null. Not investigated.
+
+![WebGL in Firefox](img/firefox-webgl.png)
+
+## Open
+
+- Compute `imageStore`/`imageLoad` agree with each other but write outside the image (`usclib_twiddle2d`).
+- Device features copied from the GE8300 and not verified: the vendor uses `max_partitions` 6 and `isp_max_tiles_in_flight` 2 (we have 10 and 4). USC store sizes and TPU and UVS values are unknown; `libusc.so` in `/vendor/lib` may have them.
+- HWR recovery: after a 3D lockup the kernel does not answer the free list reconstruction request, so later jobs time out.
 
 ## Plan
 
