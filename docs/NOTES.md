@@ -142,6 +142,8 @@ LK turns on the panel and the path OVL0 -> RDMA0 -> DBI0 (mutex 0). The panel ha
 - Our DRM device has no vblank support, so the atomic helpers fake the flip-done events. Compositors work with that.
 - Sway 1.12 / wlroots 0.20: the first `output * power on` after `power off` fails ("Backend commit failed") with no kernel commit and no wlroots error. The second one works, so swayidle sends it twice.
 - `agm-home` is a background layer surface. It reads `/dev/input/event*` for the Menu then `*` lock combo, so it does not take keys away from Sway. `agm-lock` uses `ext-session-lock-v1`, so no input reaches the session while it runs.
+- `agm-menu` reads `.desktop` files from `XDG_DATA_DIRS`. Sway binds the soft keys itself, so the menu switches Sway to the `menu` mode while it is open. Sway drops a mode without bindings, so `menu` has one (`XF86Send nop`).
+- Sway 1.12 crashed in `constrain_popup` when t9 committed its input method popup after its text field lost focus to the menu: the function has no NULL check for the focused text input. `nixos/patches/sway-im-popup-no-text-input.patch` adds it.
 - iwd allows D-Bus access only for root and `wheel`. A small policy lets `user` call `GetManagedObjects` and `GetOrderedNetworks`.
 
 ## T9 input method
