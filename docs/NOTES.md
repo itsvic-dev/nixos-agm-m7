@@ -114,6 +114,12 @@ LK turns on the panel and the path OVL0 -> RDMA0 -> DBI0 (mutex 0). The panel ha
 - Backlight: `disp_pwm` (0x1100e000) on GPIO85 (function 1), the MT8183 register layout. The ODM DTBO sets `lcd-backlight` to `led_mode 5` (BLS PWM). LK leaves GPIO85 as a plain GPIO, driven high, with the PWM off. `disp_pwm_sel` runs at 104 MHz from `univpll2_d4` (LineageOS uses 26 MHz).
 - The backlight node has a phandle, so `pwm-backlight` stays off until the display driver enables it. `mt6739-dbi` does that in `enable`, and in `disable` it sends DCS display off and sleep in (single commands go to `SCMD0`). `enable` sends sleep out, waits 120 ms and sends display on.
 
+## CPU idle
+
+- PSCI `CPU_OFF`/`CPU_ON` and `CPU_SUSPEND` power-down work in the stock ATF without the vendor MCDI driver. We use two stock states: core off (`0x10001`) and cluster off (`0x1010001`). The deeper stock states (SODI, deep idle, `0x1010002`..`0x1010005`) need the SPM firmware and are not used.
+- Both states stop the local timer. The SYST timer (0x10017000, SPI 186, 13 MHz) is the broadcast device (`mtk-clkevt`).
+- With `NO_HZ_IDLE` and the `menu` governor, the idle cores spend about 95% of the time in cluster off.
+
 ## I2C and touch
 
 - MT6739 I2C uses the v1 register layout plus `LTIMING` at 0x2c. The vendor driver also sets `CLOCK_DIV` (low byte only), the `IO_CONFIG` "AED" field (0x1f << 4) and leaves `DCM_EN` at 0xe. We copy that.
