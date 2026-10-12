@@ -5,7 +5,7 @@ Goal: a small mainline driver that turns on MD1, lets it run, and completes hand
 Sources and how sure each item is:
 - **[S]** Vendor kernel `ref/lumi-mt6739` (`eccci/`, `eccci/mt6739/`, `ccci_util/`, `clk-mt6739-pg.c`, `pmic/mt6357/v1/pmic.c`, `spm_v4/`). It is close to the phone kernel, but not the same build. It has `MD_GENERATION 6293` (`eccci/mt6739/ccci_config.h`).
 - **[L]** Stock LineageOS `logs/reference/wifi/dmesg.txt`. The stock kernel is 4.4.95, **32-bit ARMv7** (dmesg line 7). `CCCI_BOOTUP_LOG` lines go to a private buffer, so they are not in dmesg.
-- **[B]** Stock DTB `stock/stock.dts` (from `stock/dtb0.dtb`).
+- **[B]** Stock DTB, decompiled from the stock `boot.img` (not in this repo).
 - **[D]** LK disassembly (`~/agm-m7-backup/lk.img`, base 0x46000000, `scripts/re/lkdis.py`, `lkrefs.py` with capstone from `nix shell`).
 - **[P]** Phone readout (values given in the task).
 - **[M]** Mainline tree in `linux/`.

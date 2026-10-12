@@ -6,7 +6,7 @@ Only the `MD_GENERATION >= 6293` code paths are in this document.
 Tags:
 - **[S]** vendor source `ref/lumi-mt6739/drivers/misc/mediatek/eccci/` (`hif/ccci_hif_cldma.[ch]`, `mt6739/cldma_reg.h`, `port/port_net.c`, `port/port_cfg.c`, `port/port_proxy.c`, `port/port_rpc.c`, `../ccmni/ccmni.c`). File:line is given where it helps.
 - **[L]** stock `logs/reference/wifi/dmesg.txt`.
-- **[B]** stock `stock/stock.dts`.
+- **[B]** Stock DTB, decompiled from the stock `boot.img` (not in this repo).
 - **[V]** strings in the stock `vendor.img` (`~/agm-m7-backup`), MTK RIL and netagent.
 - **[H]** our hypothesis, not verified.
 

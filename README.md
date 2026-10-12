@@ -121,5 +121,4 @@ Mainline Linux and NixOS on the AGM M7, a rugged keypad phone with a MediaTek MT
 - `pkgs/`: the kernel, `boot.img` parts and `boot.img`.
 - `tools/`: home screen, keyguard and settings (`shell`, Rust), the `t9` input method, the modem NVRAM service and ModemManager plugin, GPU test programs.
 - `scripts/`: build, flash, deploy and test helpers.
-- `stock/`: decompiled stock DT and ODM DTBO.
 - `docs/`: findings and reverse engineering notes.
