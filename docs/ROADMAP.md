@@ -45,7 +45,7 @@ Findings are in `NOTES.md`. This file tracks what is done and what is left.
 - Charger: BC1.2 charger type detection for higher currents on wall chargers.
 - Remove `clk_ignore_unused` from the cmdline.
 - USB DMA (MUSB runs in PIO mode).
-- eMMC HS400: find the strobe delay register in the MSDC0 pad macro (0x11cd0000) and give `mtk-sd` an MT6739 entry for it. A failed HS400 tuning leaves the eMMC unusable, so test with care. HS200 already gives most of the speed.
+- eMMC HS400: find the strobe delay register in the MSDC0 pad macro (0x11cd0000) and give `mtk-sd` an MT6739 entry for it. A failed HS400 tuning leaves the eMMC unusable, so test with care. HS200 already gives most of the speed. The SD card had the same cause: its delay lines are in a second block (MSDC1 at 0x11c40000), so MSDC0 probably needs its block at 0x11cd0000 the same way. MSDC1 also lacks the 1.8 V TDSEL/RDSEL pad settings and the Schmitt trigger the vendor sets (see `SD-SDR104-RESEARCH.md`).
 - Wi-Fi: CONSYS makes an EMI MPU write violation out of range at 0x40080400 at every boot (see `MODEM-RE.md` section 8).
 - `MEMCG` crashes in `__refill_obj_stock` when systemd loads BPF.
 - Display: panel power and init without LK, TE or a vblank event, DBI frame-done IRQ instead of polling.
