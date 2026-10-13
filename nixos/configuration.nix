@@ -51,10 +51,12 @@
   nixpkgs.flake.setFlakeRegistry = false;
 
   environment.systemPackages = with pkgs; [
+    android-tools
     evtest
     fastfetch
     i2c-tools
     libgpiod
+    rsync
     (runCommand "devmem" { } "mkdir -p $out/bin; ln -s ${busybox}/bin/busybox $out/bin/devmem")
   ];
 
