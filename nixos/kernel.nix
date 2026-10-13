@@ -11,6 +11,8 @@
     "regulator_ignore_unused"
     "g_cdc.dev_addr=02:4d:37:00:00:01"
     "g_cdc.host_addr=02:4d:37:00:00:02"
+    # Overrides LK's slub_debug=OFZPU; its red zones crash MEMCG.
+    "slub_debug=-"
   ];
 
   boot.consoleLogLevel = 8;
