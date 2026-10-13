@@ -21,7 +21,6 @@ in
     '';
   };
 
-  # Root partition type root-arm64, which systemd-repart matches as Type=root.
   system.build.sdImage = pkgs.runCommand "agm-m7-sd.img" { nativeBuildInputs = [ pkgs.util-linux ]; } ''
     root=${config.system.build.rootfs}
     size=$(stat -L -c %s $root)
@@ -32,9 +31,25 @@ in
     dd if=$root of=$out bs=1M seek=1 conv=notrunc status=none
   '';
 
-  # On the first boot, grow the root partition and its ext4 to the whole card.
-  systemd.repart.enable = true;
-  systemd.repart.partitions."10-root".Type = "root";
+  fileSystems."/mnt/sd" = {
+    device = "/dev/disk/by-partlabel/nixos";
+    fsType = "ext4";
+    options = [
+      "nofail"
+      "x-systemd.device-timeout=15s"
+    ];
+  };
+  fileSystems."/home" = {
+    device = "/mnt/sd/home";
+    fsType = "none";
+    options = [
+      "bind"
+      "nofail"
+    ];
+    depends = [ "/mnt/sd" ];
+  };
+
+  services.fstrim.enable = true;
 
   systemd.services.nix-register-rootfs = {
     wantedBy = [ "multi-user.target" ];
