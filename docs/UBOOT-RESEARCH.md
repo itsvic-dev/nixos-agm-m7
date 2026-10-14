@@ -209,6 +209,11 @@ U-Boot tree: `u-boot/` (worktree of `ref/u-boot`, branch `agm-m7`). Build: `scri
 - In recovery mode the LK bootargs have `boot_reason=2 androidboot.bootreason=rtc`.
 - `text_offset` in the image header does not matter here. U-Boot uses 0, like Linux.
 
+2026-10-14, later: U-Boot services the watchdog (`mtk_wdt`, 15 s timeout; a 90 s `sleep` passes). MSDC0 works with the `mt8183-mmc` compat and fixed-clock stubs (LK leaves `msdc50_0_sel` at 384 MHz, `hclk` at 136.5 MHz): 8-bit HS52, GPT with all partition names. U-Boot boots the NixOS `boot.img` from `boot` with `bootm` (`CONFIG_ANDROID_BOOT_IMAGE`): `bootargs` = LK `/chosen/bootargs` from the `x0` DTB + the `boot.img` cmdline, DTB = the `x0` DTB. NixOS comes up; only the modem fails, because LK in recovery mode does not load it.
+
+- `bootm` prints `ERROR: reserving fdt memory region failed ... -17` for 5 regions (MCUPM, SPM, framebuffer, ATF log, log store). LK puts them in the DTB twice, so LMB sees the second copy as existing. It does no harm.
+- Host edits are sometimes not yet visible in the OrbStack VM when the build starts at once. `build-uboot.sh` then builds the old defconfig. Wait a second or check `out-uboot/.config`.
+
 ## Sources
 
 - U-Boot: `drivers/usb/musb-new/mt85xx.c`, `musb_uboot.c`, `drivers/usb/gadget/udc/udc-uclass.c`, `drivers/phy/phy-mtk-tphy.c`, `drivers/mmc/mtk-sd.c`, `drivers/watchdog/mtk_wdt.c`, `drivers/power/pmic/mtk-pwrap.c`, `arch/arm/mach-mediatek/`, `configs/mt8516_pumpkin_defconfig`, `configs/mt8518_ap1_emmc_defconfig`, `arch/arm/lib/save_prev_bl_data.c`, `arch/arm/mach-snapdragon/board.c`, `doc/board/qualcomm/board.rst`, `doc/board/samsung/exynos-mobile*.rst`.
