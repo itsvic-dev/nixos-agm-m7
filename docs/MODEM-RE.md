@@ -345,7 +345,19 @@ Manual test on LineageOS 24.0 with our kernel, LK in normal mode (U-Boot in `boo
 
 - Same steps as `nixos/modem.nix`: mount `protect1`/`protect2` read-only, seed a copy of `nvdata/md`, `md_cmn`, `protect_f/md`, `protect_s/md`, start `ccci-fsd /dev/ccci_fs <copy>`, write 1 to the driver `state`. `/dev/wwan0at0` and `wwan0` appear, the modem is `ready`.
 - AT, in the order ModemManager uses on NixOS (trace in `logs/modem/nixos-mm-debug.log`): `ATE0`, `AT+CMEE=1`, `AT+EBOOT=0`, `AT+EFUN=0` (SIM on), `AT+CPIN?`, `AT+CFUN=1`, `AT+EIFCONFIG=3`, `AT+EIAREG=1` (CME 100, harmless), `AT+EDALLOW=1`, `AT+CGATT=1` (LTE attach), `AT+EIAAPN="internet",0`, `AT+EAPNACT=1,"internet","default",0`, `AT+EIF=<ifid>,"ifst","up",1`, `AT+EPDN=<aid>,"ifst",20`. Then the IPv4 address /32 on `wwan0`, a routing table for `wwan0`, and ping works.
-- Do not send `AT+CGATT=1` while the modem is still on GSM (`+CEREG` 4). It blocks the AT channel (no answer, no URC) for more than 10 minutes, and only a reboot ends it. Without it, the modem registers on LTE by itself after `+CFUN=1`: on NixOS a fresh copy of the stock NVRAM reaches LTE in 66 s, and ModemManager never sends `+CGATT`. The data call can start when `+CEREG` is 1 or 5. An earlier guess that the stock NVRAM lacks something was wrong; the stock APN table is already there (`+EAPNSET` gives `CME ERROR: 5841`).
+- `AT+CGATT=1` while the modem is on GSM (`+CEREG` 4) blocked the AT channel two times (no answer, no URC, more than 10 minutes, only a reboot ends it). `AT+EDALLOW=1` sent while on GSM did the same one time. On 2026-10-15, `AT+CGATT=1` on GSM attached to LTE in a few seconds without a hang. The cause of the hang is not known. On NixOS a fresh copy of the stock NVRAM reaches LTE in 66 s, and ModemManager never sends `+CGATT`. The data call can start when `+CEREG` is 1 or 5. An earlier guess that the stock NVRAM lacks something was wrong; the stock APN table is already there (`+EAPNSET` gives `CME ERROR: 5841`).
 - `adb push` of larger files broke the USB connection until `vm.min_free_kbytes` was raised to 16384, as on NixOS.
 - Do not run one `cat` reader and `echo >>` markers into the same file: the reader overwrites from its own offset. Append from both sides (`>>`).
 
+### Radio HAL (2026-10-15)
+
+The AIDL radio HAL in `device/agm/m7/radio` (a copy of the goldfish HAL) gives mobile data on LTE with no manual steps. Findings:
+
+- Packet attach: with `+EGTYPE: 0` (the default) the modem attaches for packet data only on `AT+CGATT=1`, and again after each `+CFUN=1`. Without it, it stays on GSM with `+CGREG`/`+CEREG` 4 and `+CGATT: 0`. `AT+EGTYPE=1` (always attach) makes it attach to LTE about 15 s after `+CFUN=1`. The HAL sends it at init.
+- Radio off: `AT+CFUN=0` also turns the SIM off, and Android then shows "Invalid card" (`CARD_IO_ERROR`). The HAL uses `AT+CFUN=4`.
+- `+EIFCONFIG=3`, `+EIAREG=1` and `+EDALLOW=1` go right after `+CFUN=1`, as ModemManager sends them.
+- The data registration state comes from `+CGREG`/`+CEREG`, not `+CREG`. With `+CREG` the framework started data calls on GSM, every 10 s, and they all failed.
+- The HAL does not send the initial attach APN (`+EIAAPN`) when the framework sets it. The modem attaches with the APN from its NVRAM. `setupDataCall` sends `+EAPNSET` and `+EIAAPN` before `+EAPNACT`, as ModemManager does.
+- Not supported by this modem: `+CICCID` (use `AT+ICCID?`, the answer ends with an `F` pad), `+CGSN=2` (use `+CGSN`), `+CTEC` (emulated from the last `<AcT>`), `+CLCK="FD"`, `+CMOD`, `+CMUT`, `+CSCB`. Unsupported commands answer a plain `ERROR`.
+- Answer formats: CR LF line ends; raw answers have CRs around them; `+CRSM: 144, 0, "<hex>"` has spaces and quotes; `+COPS: 0` without an operator before registration.
+- APN database: a `userdata` that was made with a Wi-Fi only build has an empty APN table (1 row), and the framework says `NO_SUITABLE_DATA_PROFILE`. `content delete --uri content://telephony/carriers/restore` loads `apns-conf.xml`. A clean install does not need it.
