@@ -196,6 +196,19 @@ Total with section 5: about 2 to 3 weeks of part-time work.
   2. Move U-Boot to `boot` only when it starts NixOS by default, reliably, without any key press.
   3. U-Boot's own fastboot and a "LK fastboot" menu entry (RTC bit 13, needs pwrap) come before risky features.
 
+## 7. Bring-up log
+
+U-Boot tree: `u-boot/` (worktree of `ref/u-boot`, branch `agm-m7`). Build: `scripts/build-uboot.sh` (`out-uboot/boot.img`). Test: `scripts/test-uboot.sh` writes it to `recovery`, boots it with `reboot recovery`, and prints the U-Boot log from NixOS with `ramconsole`.
+
+2026-10-14: U-Boot runs (banner, DRAM, LK DTB, watchdog reset back to NixOS). Facts found on the way, all **[src]** (tested on the phone):
+
+- LK reads the last 512 KiB of the kernel blob (gzip + appended DTB) and scans backwards for the DTB magic. A blob smaller than 512 KiB gives a negative partition offset, and LK does not boot it. `build-uboot.sh` pads the gzip stream with zeros to 1 MiB.
+- LK does not start a `boot.img` without a ramdisk. `build-uboot.sh` adds an empty cpio.
+- Hand-off: AArch64 EL2, MMU and caches off, image at `0x40200000`, DTB in `x0` at `0x44000000`. `CNTFRQ_EL0` is 13 MHz.
+- LK leaves the watchdog running (`WDT_MODE` `0x5d`: enabled, IRQ, dual mode, auto start). A U-Boot that stops or waits resets after about a minute, so U-Boot must service or reprogram the watchdog.
+- In recovery mode the LK bootargs have `boot_reason=2 androidboot.bootreason=rtc`.
+- `text_offset` in the image header does not matter here. U-Boot uses 0, like Linux.
+
 ## Sources
 
 - U-Boot: `drivers/usb/musb-new/mt85xx.c`, `musb_uboot.c`, `drivers/usb/gadget/udc/udc-uclass.c`, `drivers/phy/phy-mtk-tphy.c`, `drivers/mmc/mtk-sd.c`, `drivers/watchdog/mtk_wdt.c`, `drivers/power/pmic/mtk-pwrap.c`, `arch/arm/mach-mediatek/`, `configs/mt8516_pumpkin_defconfig`, `configs/mt8518_ap1_emmc_defconfig`, `arch/arm/lib/save_prev_bl_data.c`, `arch/arm/mach-snapdragon/board.c`, `doc/board/qualcomm/board.rst`, `doc/board/samsung/exynos-mobile*.rst`.
