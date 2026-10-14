@@ -4,7 +4,7 @@ Findings are in `NOTES.md`. This file tracks what is done and what is left.
 
 ## Done
 
-- Boot: LK loads our `boot.img` from `boot` (LineageOS is in `recovery`), ODM overlay sink, pstore earlycon, early watchdog.
+- Boot: LK starts U-Boot from `boot` (menu, extlinux, fastboot; see `UBOOT-RESEARCH.md`), LineageOS recovery is in `recovery`, ODM overlay sink, pstore earlycon, early watchdog.
 - Restart through the `mtk_wdt` restart handler.
 - Clocks, pinctrl, GPIO, EINT.
 - USB gadget: serial shell and ECM networking.
@@ -20,14 +20,14 @@ Findings are in `NOTES.md`. This file tracks what is done and what is left.
 - I2C0 and I2C1, touchscreen, HL7005 charger.
 - Flake builds the kernel (from GitHub) and `boot.img` parts. NixOS systemd initrd replaces the busybox initramfs.
 - Graphical session: Sway (pixman) with `foot`, the `agm-menu` launcher and Firefox. The `wvkbd` on-screen keyboard stays hidden until the side key (F11) shows it.
-- Fast test loop: flash `boot` from NixOS and reboot.
+- Fast test loop: deploy NixOS (`scripts/nixos-deploy.sh`), U-Boot writes nothing; reboot.
 - Wi-Fi: CONSYS bring-up and the vendor gen2 driver in staging, with NetworkManager and iwd (see `WIFI.md`).
 - GPU: vendor DDK 1.9 firmware on the mainline `powervr` driver, Mesa Vulkan 1.2, and GL 2.1 / GLES 2.0 through Zink (see `GPU.md`).
 - T9 input method (`tools/t9`) with English and Polish word lists.
 - Audio: own MT6739 AFE, `mt6357` codec, `aw8738` amplifier. Speaker, earpiece and main mic through PipeWire with a UCM profile.
 - Modem (MD1, `MOLY_LR12A_R2_MP_V96_6`) as a data-only LTE modem: `mt6739-ccci` (power-on, handshakes, RPC, CLDMA, WWAN AT port and `wwan0`), `ccci-fsd` NVRAM service, ModemManager plugin `mtk-ccci`, NetworkManager connection `mobile` (IPv4, 57 Mbit/s down). Status bar, home screen and Settings show the mobile network. Reference: vendor `eccci` and `ccci_util` in `ref/lumi-mt6739`, mainline `t7xx`.
 - microSD (UHS-I SDR104) as the NixOS root. `.#sd-image` with growing on the first boot (systemd-repart, `x-systemd.growfs`).
-- Bootloader module: each NixOS system builds its `boot.img`, and `switch-to-configuration` writes it to `boot`.
+- Bootloader module: `switch-to-configuration` writes extlinux.conf and the generations to the FAT `vendor` partition for U-Boot.
 
 ## Follow-ups
 

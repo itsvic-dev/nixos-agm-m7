@@ -21,7 +21,7 @@ LK loads at 0x46000000. Facts found by disassembly:
 
 ## Test loop
 
-Our `boot.img` is in `boot` (`mmcblk0p25`). The stock LineageOS boot image is in `recovery` (`mmcblk0p2`). LK loads and starts the modem only in normal boot; in recovery mode it turns the modem off. A normal reboot or a watchdog reset boots NixOS. LineageOS boots only with `reboot recovery`.
+Since 2026-10-14 U-Boot is in `boot` (`mmcblk0p25`) and LineageOS recovery is in `recovery` (`mmcblk0p2`). LK starts U-Boot in normal boot, so the modem is loaded for every OS that U-Boot starts. U-Boot shows a menu for 3 s (NixOS, NixOS generations, LineageOS, LineageOS recovery, Fastboot, Reboot) and then boots NixOS with extlinux from the FAT `vendor` partition (`/boot`). LineageOS `boot.img` and `recovery.img` are in `/boot/android/`. `reboot recovery` makes LK start LineageOS recovery directly, without U-Boot; that is the way to repair `boot` (root ADB after "Advanced > Enable ADB"). See `UBOOT-RESEARCH.md`. Old NixOS `boot.img`: `backup/boot-2026-10-14/`.
 
 In recovery boot mode the vendor rule in `init.mt6739.usb.rc` never binds the USB gadget, so LineageOS has no USB ADB. `/system/etc/init/agm-m7.rc` on LineageOS has a fallback: after `sys.boot_completed=1` with `ro.bootmode=recovery`, it links `ffs.adb` and writes the `UDC`. Root (`phh-su`) works only from an ADB shell.
 
@@ -70,7 +70,7 @@ PSCI `SYSTEM_RESET` and `SYSTEM_OFF` both hang in the ATF. The watchdog is stopp
 - Migration from `/data/nixos.img`: `sfdisk` and `mkfs.ext4` on the card, `nixos-deploy.sh boot` with the new initrd, then `cp -ax / <card>` with `nix-daemon` stopped (3.3 GB in 3.5 min), then flash `boot.img`. The old image is still on `userdata`.
 - A full root makes the phone's auto-GC delete paths during `nix copy`, which shows up as "path ... is not valid".
 - `scripts/nixos-deploy.sh [boot|switch]` copies a new system closure over SSH, sets the system profile and runs `switch-to-configuration`. `/sbin/init` on the root points to that profile, so `boot` takes effect at the next boot.
-- Bootloader module (`nixos/bootloader.nix`, `boot.loader.agm-m7`): `system.build.bootImage` packs the kernel, DTB, initrd and cmdline, and the toplevel links it as `boot.img`. `installBootLoader` compares it with the `boot` partition and writes it only if it differs. There is one `boot.img` and LK has no menu, so older generations cannot be picked at boot. To roll back, run the older generation's `switch-to-configuration boot`, which writes its `boot.img` too.
+- Bootloader module (`nixos/bootloader.nix`, `boot.loader.agm-m7`): `installBootLoader` writes `extlinux.conf` and the last 8 generations to `/boot` (FAT on `vendor`) for U-Boot; "NixOS generations" in the U-Boot menu picks an older one. `system.build.bootImage` still builds an LK `boot.img`, and `boot.loader.agm-m7.device` would write it to a partition (null now, since U-Boot is in `boot`).
 - `ssh root@172.16.42.1`. `ttyGS0` has a root autologin. systemd-networkd gives the Mac 172.16.42.2 over DHCP.
 - The kernel needs `NETDEVICES` (else `SO_BINDTODEVICE` fails and networkd, resolved and sshd break) and nftables. `MEMCG` crashes the kernel when systemd loads BPF programs, so it stays off.
 
