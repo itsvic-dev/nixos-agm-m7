@@ -58,6 +58,7 @@
     libgpiod
     rsync
     (runCommand "devmem" { } "mkdir -p $out/bin; ln -s ${busybox}/bin/busybox $out/bin/devmem")
+    (callPackage ../tools/ramconsole/package.nix { })
   ];
 
   system.stateVersion = "26.05";
