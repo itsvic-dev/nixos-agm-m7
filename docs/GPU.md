@@ -145,11 +145,17 @@ github.com/LgPWNd/Alcatel_mt6739_5059R_and_5041C_universal_kernel-4.4.95-,
 
 ![WebGL in Firefox](img/firefox-webgl.png)
 
+## HWR (done)
+
+- The kernel answers FWCCB 103 (free list grow) and 104 (free list reconstruction), and logs 105 (context reset). The 1.9 host increments the free list `hwr_counter` and does not reset the HWRT state. The reconstruction reply goes on the TA DM, the grow reply on the 3D DM.
+- With `ui32MaxDeadlineMS` 0 the firmware uses its default deadline: a hung fragment shader is reset after about 20 s (reason 3, guilty overrunning). If the process exits first, the firmware sees page faults instead.
+- After recovery, compute and render jobs run again.
+
 ## Open
 
 - Compute `imageStore`/`imageLoad` agree with each other but write outside the image (`usclib_twiddle2d`).
 - Device features copied from the GE8300 and not verified: the vendor uses `max_partitions` 6 and `isp_max_tiles_in_flight` 2 (we have 10 and 4). USC store sizes and TPU and UVS values are unknown; `libusc.so` in `/vendor/lib` may have them.
-- HWR recovery: after a 3D lockup the kernel does not answer the free list reconstruction request, so later jobs time out.
+- `vk-triangle` fails on the readback: the image in memory is correct (`RAW=1`), but the compute readback reads garbage. Also with the stock module, so not caused by HWR.
 
 ## Plan
 
