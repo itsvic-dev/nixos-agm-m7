@@ -1,0 +1,14 @@
+#version 450
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(binding = 0, r32ui) uniform writeonly uimage2D img;
+layout(std430, binding = 1) buffer Out {
+	uint values[];
+};
+
+void main()
+{
+	ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+	imageStore(img, p, uvec4(0xbb000000u | uint(p.y) << 8 | uint(p.x)));
+}

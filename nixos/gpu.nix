@@ -64,6 +64,7 @@
   environment.systemPackages = [
     pkgs.vulkan-tools
     (pkgs.callPackage ../tools/vk-compute/package.nix { })
+    (pkgs.callPackage ../tools/vk-image/package.nix { })
     (pkgs.callPackage ../tools/vk-triangle/package.nix { })
   ];
 }

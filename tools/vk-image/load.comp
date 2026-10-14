@@ -1,0 +1,16 @@
+#version 450
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(binding = 0, r32ui) uniform readonly uimage2D img;
+layout(std430, binding = 1) buffer Out {
+	uint values[];
+};
+
+void main()
+{
+	ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+	ivec2 size = imageSize(img);
+	if (p.x < size.x && p.y < size.y)
+		values[p.y * size.x + p.x] = imageLoad(img, p).x;
+}
