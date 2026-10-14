@@ -2,6 +2,9 @@
 # usage: android-flash.sh  (in android-build-arm64: sparse super.img to the microSD super partition, boot.img and recovery.img to /boot/android for U-Boot, recovery.img to recovery)
 set -euo pipefail
 host=${HOST:-root@172.16.42.1}
+# The VM NAT drops idle connections, and simg2img prints nothing for minutes.
+export RSYNC_RSH="ssh -o ServerAliveInterval=15"
+ssh() { command ssh -o ServerAliveInterval=15 "$@"; }
 out=${OUT:-/Volumes/Android/lineage/out/target/product/m7}
 stage=/var/cache/android-flash
 cd "$out"
