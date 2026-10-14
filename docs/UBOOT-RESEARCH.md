@@ -212,6 +212,8 @@ U-Boot tree: `u-boot/` (worktree of `ref/u-boot`, branch `agm-m7`). Build: `scri
 2026-10-14, later: U-Boot services the watchdog (`mtk_wdt`, 15 s timeout; a 90 s `sleep` passes). MSDC0 works with the `mt8183-mmc` compat and fixed-clock stubs (LK leaves `msdc50_0_sel` at 384 MHz, `hclk` at 136.5 MHz): 8-bit HS52, GPT with all partition names. U-Boot boots the NixOS `boot.img` from `boot` with `bootm` (`CONFIG_ANDROID_BOOT_IMAGE`): `bootargs` = LK `/chosen/bootargs` from the `x0` DTB + the `boot.img` cmdline, DTB = the `x0` DTB. NixOS comes up; only the modem fails, because LK in recovery mode does not load it.
 
 - `bootm` prints `ERROR: reserving fdt memory region failed ... -17` for 5 regions (MCUPM, SPM, framebuffer, ATF log, log store). LK puts them in the DTB twice, so LMB sees the second copy as existing. It does no harm.
+- Display: `drivers/video/mt6739_dbi.c`, a port of the Linux `mt6739-dbi` driver. It reads the panel size from `DBI_ROI_SIZE`, points OVL layer 3 at a 32-bit XRGB framebuffer from the video uclass, and starts a DBI transfer in `video_sync`. `video_sync()` calls the driver before it flushes the cache, so the driver flushes the framebuffer itself, and it skips a sync while the DBI is busy. Linux takes the display over without problems.
+- Keypad: `drivers/input/mtk_keypad.c` polls `KPD_MEM` and uses `linux,keymap`. Arrows, Enter and the digits work in `bootmenu` and on the console (`stdin=serial,keypad`).
 - Host edits are sometimes not yet visible in the OrbStack VM when the build starts at once. `build-uboot.sh` then builds the old defconfig. Wait a second or check `out-uboot/.config`.
 
 ## Sources
