@@ -218,6 +218,8 @@ U-Boot tree: `u-boot/` (worktree of `ref/u-boot`, branch `agm-m7`). Build: `scri
 - U-Boot menu: NixOS (`sysboot`, default after 3 s), NixOS generations (`sysboot -p`), LineageOS, LineageOS recovery, NixOS `boot.img`, Reboot. All of them boot. `ft_board_setup` puts the LK `/chosen/bootargs` before the OS arguments. `lk_bootmode` (third word of `/chosen/atag,boot`: 0 normal, 2 recovery, 8/9 charging) skips the menu in charger mode. The NixOS initrd needs `SUPPORT_RAW_INITRD`.
 - LK already adds `/firmware/android` (from the ODM overlay); U-Boot only sets `boot_devices`.
 - LineageOS recovery: ADB shows `unauthorized` until "Advanced > Enable ADB" in the recovery menu (D-pad works). Then `adb shell` is root. The recovery UI is far too large for 240 px.
+- Fastboot (2026-10-14): MUSB with the `mt85xx` glue (`mediatek,mt6739-musb`, PHY base from the second `reg` entry, `0x11cc0800`). The MT6739 PHY zeroes the rest of the 32-bit word on a byte write, so the glue now does 32-bit read-modify-write (the old byte writes left `phy+6c` at `0x3e00` instead of `0x3f2f`, and the host saw nothing). `board_usb_init()` sets `usb_top_sel` to `univpll3_d4` and ungates `ICUSB`; LK had already done both. `vusb33` is on (`0x199c` = 1). Download speed about 8 MB/s (PIO). `fastboot flash <partition>` works for eMMC partitions by GPT name. pwrap works with the MT8365 register table (`pmic read`).
+- LineageOS recovery cannot reboot itself to recovery (no `/misc` for the BCB); a plain reboot works.
 - Host edits are sometimes not yet visible in the OrbStack VM when the build starts at once. `build-uboot.sh` then builds the old defconfig. Wait a second or check `out-uboot/.config`.
 
 ## Sources
