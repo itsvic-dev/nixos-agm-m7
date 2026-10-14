@@ -94,7 +94,7 @@ github.com/LgPWNd/Alcatel_mt6739_5059R_and_5041C_universal_kernel-4.4.95-,
 ## Stage 4 (Mesa, started)
 
 - `nixos/gpu.nix`: Mesa overlay with only the `imagination` Vulkan driver (no OpenGL, EGL, GBM or LLVM; about 13 MiB) and `vulkan-tools`. Sway stays on pixman.
-- `nixos/patches/mesa-ge8100.patch`: device entry for 22.49.21.16. The features are the GE8300 ones for now.
+- Mesa comes from the fork github.com/itsvic-dev/mesa: branch `agm-m7` (upstream 26.2.3 plus the GE8100 commits) for NixOS, `agm-m7-android` (LineageOS `lineage-24.0` plus the same commits plus the Android ones) for `external/mesa`. The device entry for 22.49.21.16 uses the GE8300 features for now.
 - Kernel: free lists (1.9 adds a HWR counter at offset 40), render contexts (TA and 3D common contexts back to back, 328 bytes) and transfer contexts (one 3D common context). Each queue state object is followed by its RF command.
 - `PVR_I_WANT_A_BROKEN_VULKAN_DRIVER=1 vulkaninfo` lists "PowerVR Rogue GE8100", Vulkan 1.2. Device creation runs about 56 firmware commands without HWR.
 - Fixed: MMU flush, cleanup and `SYNC` must hold a runtime PM reference. Without it the firmware read one slot past the KCCB write offset and later kicks failed, so `vulkaninfo` hung.
@@ -153,7 +153,7 @@ github.com/LgPWNd/Alcatel_mt6739_5059R_and_5041C_universal_kernel-4.4.95-,
 
 ## Storage images (done)
 
-- Without `tpu_extended_integer_lookup`, Mesa set `index_lookup` in every storage image descriptor but still sent float coordinates. The TPU read 1.0 as index 0x3f800000, so only texel (0,0) worked: other loads returned 0 and other stores were lost. `mesa-ge8100.patch` no longer sets the bit.
+- Without `tpu_extended_integer_lookup`, Mesa set `index_lookup` in every storage image descriptor but still sent float coordinates. The TPU read 1.0 as index 0x3f800000, so only texel (0,0) worked: other loads returned 0 and other stores were lost. The fork no longer sets the bit.
 - `tools/vk-image` (installed as `vk-image load|store`, `WIDTH`, `HEIGHT`): R32UI image, the CPU writes or finds each texel at its twiddled offset.
 - All `vk-triangle` modes pass the readback. `TILE` and `PROBE` fail the built-in centre check by design.
 
@@ -163,8 +163,31 @@ github.com/LgPWNd/Alcatel_mt6739_5059R_and_5041C_universal_kernel-4.4.95-,
 - `ISP_CTL.ISP_SAMPLE_POS_MODE` (DX10, OGL) does not fix it: with either value, render jobs write nothing.
 - `tools/vk-raster` (installed as `vk-raster`): checks `gl_FragCoord`, varyings and nearest texture lookups per pixel. MoltenVK passes it as a reference.
 
+## Macrotile array (done)
+
+- On Android, TA and 3D jobs faulted about every 6 s: the PM wrote its macrotile array (`PMA_MAVP`, BIF tag 0xA, sideband 6) to address 0. With the simple internal parameter format, Mesa allocated no macrotile array, but the GE8100 PM still writes it. The fork now gives each HWRT data a 4 KiB array; no resets since.
+
+## Mesa CPU overhead (done)
+
+- `simpleperf` on the HWUI render thread: about a third was the kernel creating, mapping and freeing GEM objects, and every render pass compiled its end-of-tile shader.
+- The fork keeps freed CPU mapped buffers mapped for reuse (at most 4 MiB per process) and caches end-of-tile programs per device.
+
+## Android
+
+- GLES through ANGLE on the PowerVR Vulkan driver; HWUI and SurfaceFlinger render with Vulkan directly. Apps are compiled at build time (`speed`).
+- `scripts/android-ui-bench.sh` drives quick settings, the app drawer, Settings and the wallpaper picker, then prints `gfxinfo` frame times.
+
+| App | Before (ANGLE) | After (Vulkan, caches) |
+|---|---|---|
+| Launcher | 40 ms median, 63% janky | 15 ms, 6% |
+| Settings | 24 ms, 16% | 14 ms, 6% |
+| SystemUI | 48 ms, 62% | 29 ms, 35% |
+
+- Screen off: `drm_hwcomposer` disabled the CRTC while its plane still had a framebuffer; the fork github.com/itsvic-dev/drm_hwcomposer (branch `agm-m7`) disables the planes in the same commit.
+
 ## Open
 
+- Android: the low memory killer kills the wallpaper picker (about 220 MB, 155 MB native heap) on the Vulkan build; it survived on the ANGLE build. With Vulkan the picker itself is smaller, so the extra pressure comes from other processes. Not measured yet.
 - Device features copied from the GE8300 and not verified: the vendor uses `max_partitions` 6 and `isp_max_tiles_in_flight` 2 (we have 10 and 4). USC store sizes and TPU and UVS values are unknown; `libusc.so` in `/vendor/lib` may have them.
 
 ## Plan
