@@ -156,6 +156,50 @@ index a859059..892587e 100644
        /* Align to a 2x2 tile block. */
        *x_out = ALIGN_POT(*x_out, 2);
        *y_out = ALIGN_POT(*y_out, 2);
+diff --git a/src/imagination/pco/pco_trans_nir.c b/src/imagination/pco/pco_trans_nir.c
+--- a/src/imagination/pco/pco_trans_nir.c
++++ b/src/imagination/pco/pco_trans_nir.c
+@@ -391,6 +391,9 @@
+ 
+    enum glsl_interp_mode interp_mode = var->data.interpolation;
+ 
++   bool usc_itrsmp_enhanced =
++      PVR_HAS_FEATURE(tctx->pco_ctx->dev_info, usc_itrsmp_enhanced);
++
+    /* Setup iteration mode. */
+    enum pco_itr_mode itr_mode = PCO_ITR_MODE_PIXEL;
+    assert(!(var->data.sample && var->data.centroid));
+@@ -423,6 +426,10 @@
+          UNREACHABLE("");
+       }
+    }
++
++   /* Without enhanced iterators, pixel and centroid iteration use the pixel corner. */
++   if (!usc_itrsmp_enhanced)
++      itr_mode = PCO_ITR_MODE_SAMPLE;
+ 
+    if (location == VARYING_SLOT_POS) {
+       /* Only scalar supported for now. */
+@@ -443,6 +450,9 @@
+          pco_ref xy_p[] = { pco_ref_hwreg(PCO_SR_X_P, PCO_REG_CLASS_SPEC),
+                             pco_ref_hwreg(PCO_SR_Y_P, PCO_REG_CLASS_SPEC) };
+ 
++         if (!usc_itrsmp_enhanced)
++            return pco_mov(&tctx->b, dest, xy_s[component]);
++
+          return pco_csel(&tctx->b,
+                          dest,
+                          fs_is_single_sampled(tctx),
+@@ -476,9 +486,6 @@
+    pco_ref coeffs = pco_ref_hwreg_vec(coeffs_index,
+                                       PCO_REG_CLASS_COEFF,
+                                       ROGUE_USC_COEFFICIENT_SET_SIZE * chans);
+-
+-   bool usc_itrsmp_enhanced =
+-      PVR_HAS_FEATURE(tctx->pco_ctx->dev_info, usc_itrsmp_enhanced);
+ 
+    switch (interp_mode) {
+    case INTERP_MODE_SMOOTH: {
 diff --git a/src/imagination/vulkan/pvr_arch_descriptor_set.c b/src/imagination/vulkan/pvr_arch_descriptor_set.c
 --- a/src/imagination/vulkan/pvr_arch_descriptor_set.c
 +++ b/src/imagination/vulkan/pvr_arch_descriptor_set.c
