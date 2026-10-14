@@ -5,6 +5,10 @@
 #include <string.h>
 #include <unistd.h>
 
+#ifdef __ANDROID__
+#define VK_USE_PLATFORM_ANDROID_KHR
+#include <android/hardware_buffer.h>
+#endif
 #include <vulkan/vulkan.h>
 
 #include "probe_frag.h"
@@ -110,6 +114,8 @@ int main(int argc, char **argv)
 {
 	const uint32_t W = getenv("WIDTH") ? strtoul(getenv("WIDTH"), NULL, 0) : 64;
 	const uint32_t H = getenv("HEIGHT") ? strtoul(getenv("HEIGHT"), NULL, 0) : W;
+	/* LINEAR: bit 0 makes the render target linear, bit 1 the texture */
+	const int linear = getenv("LINEAR") ? atoi(getenv("LINEAR")) : 0;
 	int draw = argc < 2;
 	int store = argc > 1 && !strcmp(argv[1], "store");
 
@@ -143,11 +149,22 @@ int main(int argc, char **argv)
 	const char *subset_ext = "VK_KHR_portability_subset";
 	int subset = has_device_ext(phys, subset_ext);
 
+	/* AHB (Android): render into an AHardwareBuffer and read it on the CPU */
+	const int ahb_mode = getenv("AHB") != NULL;
+	const char *dev_exts[3];
+	uint32_t dev_ext_count = 0;
+	if (subset)
+		dev_exts[dev_ext_count++] = subset_ext;
+	if (ahb_mode) {
+		dev_exts[dev_ext_count++] = "VK_ANDROID_external_memory_android_hardware_buffer";
+		dev_exts[dev_ext_count++] = "VK_EXT_queue_family_foreign";
+	}
+
 	VkDevice dev;
 	CHECK(vkCreateDevice(phys, &(VkDeviceCreateInfo){
 		.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-		.enabledExtensionCount = subset,
-		.ppEnabledExtensionNames = &subset_ext,
+		.enabledExtensionCount = dev_ext_count,
+		.ppEnabledExtensionNames = dev_exts,
 		.queueCreateInfoCount = 1,
 		.pQueueCreateInfos = &(VkDeviceQueueCreateInfo){
 			.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
@@ -159,31 +176,81 @@ int main(int argc, char **argv)
 	VkQueue queue;
 	vkGetDeviceQueue(dev, family, 0, &queue);
 
+#ifdef __ANDROID__
+	AHardwareBuffer *ahb = NULL;
+	VkAndroidHardwareBufferPropertiesANDROID ahb_props = {
+		.sType = VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_PROPERTIES_ANDROID,
+	};
+	if (ahb_mode) {
+		if (AHardwareBuffer_allocate(&(AHardwareBuffer_Desc){
+			.width = W, .height = H, .layers = 1,
+			.format = AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM,
+			.usage = AHARDWAREBUFFER_USAGE_GPU_COLOR_OUTPUT |
+				 AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE |
+				 AHARDWAREBUFFER_USAGE_CPU_READ_OFTEN |
+				 (atoi(getenv("AHB")) == 2 ? AHARDWAREBUFFER_USAGE_COMPOSER_OVERLAY : 0),
+		}, &ahb)) {
+			fprintf(stderr, "AHardwareBuffer_allocate failed\n");
+			return 1;
+		}
+		PFN_vkGetAndroidHardwareBufferPropertiesANDROID get_props =
+			(void *)vkGetDeviceProcAddr(dev, "vkGetAndroidHardwareBufferPropertiesANDROID");
+		CHECK(get_props(dev, ahb, &ahb_props));
+		printf("AHB allocation size %llu, memory types 0x%x\n",
+		       (unsigned long long)ahb_props.allocationSize, ahb_props.memoryTypeBits);
+	}
+#endif
+
 	VkImage image;
 	CHECK(vkCreateImage(dev, &(VkImageCreateInfo){
 		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+		.pNext = ahb_mode ? &(VkExternalMemoryImageCreateInfo){
+			.sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO,
+			.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_ANDROID_HARDWARE_BUFFER_BIT_ANDROID,
+		} : NULL,
 		.imageType = VK_IMAGE_TYPE_2D,
 		.format = VK_FORMAT_R8G8B8A8_UNORM,
 		.extent = { W, H, 1 },
 		.mipLevels = 1,
 		.arrayLayers = 1,
 		.samples = VK_SAMPLE_COUNT_1_BIT,
-		.tiling = VK_IMAGE_TILING_OPTIMAL,
+		.tiling = linear & 1 ? VK_IMAGE_TILING_LINEAR : VK_IMAGE_TILING_OPTIMAL,
 		.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
 	}, NULL, &image));
 	VkMemoryRequirements req;
 	vkGetImageMemoryRequirements(dev, image, &req);
 	VkDeviceMemory image_mem;
+	VkDeviceSize image_size = getenv("RAW") ? 64 << 20 : req.size;
+	VkDeviceSize image_offset = getenv("RAW") ? 32 << 20 : 0;
+#ifdef __ANDROID__
+	if (ahb_mode) {
+		CHECK(vkAllocateMemory(dev, &(VkMemoryAllocateInfo){
+			.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+			.pNext = &(VkImportAndroidHardwareBufferInfoANDROID){
+				.sType = VK_STRUCTURE_TYPE_IMPORT_ANDROID_HARDWARE_BUFFER_INFO_ANDROID,
+				.pNext = &(VkMemoryDedicatedAllocateInfo){
+					.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO,
+					.image = image,
+				},
+				.buffer = ahb,
+			},
+			.allocationSize = ahb_props.allocationSize,
+			.memoryTypeIndex = __builtin_ctz(ahb_props.memoryTypeBits),
+		}, NULL, &image_mem));
+		CHECK(vkBindImageMemory(dev, image, image_mem, 0));
+	} else {
+#endif
 	CHECK(vkAllocateMemory(dev, &(VkMemoryAllocateInfo){
 		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
 		.allocationSize = getenv("RAW") ? 64 << 20 : req.size,
 		.memoryTypeIndex = find_memory(phys, req.memoryTypeBits,
 					       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT),
 	}, NULL, &image_mem));
-	VkDeviceSize image_size = getenv("RAW") ? 64 << 20 : req.size;
-	VkDeviceSize image_offset = getenv("RAW") ? 32 << 20 : 0;
 	printf("image needs %llu bytes\n", (unsigned long long)req.size);
 	CHECK(vkBindImageMemory(dev, image, image_mem, image_offset));
+#ifdef __ANDROID__
+	}
+#endif
 
 	VkImageView view;
 	CHECK(vkCreateImageView(dev, &(VkImageViewCreateInfo){
@@ -376,7 +443,7 @@ int main(int argc, char **argv)
 		.mipLevels = 1,
 		.arrayLayers = 1,
 		.samples = VK_SAMPLE_COUNT_1_BIT,
-		.tiling = VK_IMAGE_TILING_OPTIMAL,
+		.tiling = linear & 2 ? VK_IMAGE_TILING_LINEAR : VK_IMAGE_TILING_OPTIMAL,
 		.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT |
 			 VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 	}, NULL, &tex_image));
@@ -761,6 +828,25 @@ int main(int argc, char **argv)
 				     .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 				     .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
 			     }, 0, NULL, 0, NULL);
+	if (getenv("SPLIT")) {
+		/* Wait for the render on the CPU before the readback starts. */
+		CHECK(vkEndCommandBuffer(cmd));
+		CHECK(vkQueueSubmit(queue, 1, &(VkSubmitInfo){
+			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			.commandBufferCount = 1,
+			.pCommandBuffers = &cmd,
+		}, VK_NULL_HANDLE));
+		CHECK(vkQueueWaitIdle(queue));
+		CHECK(vkAllocateCommandBuffers(dev, &(VkCommandBufferAllocateInfo){
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+			.commandPool = cmd_pool,
+			.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+			.commandBufferCount = 1,
+		}, &cmd));
+		CHECK(vkBeginCommandBuffer(cmd, &(VkCommandBufferBeginInfo){
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		}));
+	}
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, readback);
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, comp_layout, 0, 1, &set, 0, NULL);
 	vkCmdDispatch(cmd, DIV_ROUND_UP(W, 8), DIV_ROUND_UP(H, 8), 1);
@@ -828,6 +914,20 @@ int main(int argc, char **argv)
 
 	printf("image size %ux%u\n", pixels[W * H], pixels[W * H + 1]);
 
+#ifdef __ANDROID__
+	if (ahb_mode) {
+		AHardwareBuffer_Desc desc;
+		AHardwareBuffer_describe(ahb, &desc);
+		uint32_t *p;
+		if (AHardwareBuffer_lock(ahb, AHARDWAREBUFFER_USAGE_CPU_READ_OFTEN, -1, NULL, (void **)&p)) {
+			fprintf(stderr, "AHardwareBuffer_lock failed\n");
+			return 1;
+		}
+		printf("AHB stride %u: corner 0x%08x, centre 0x%08x\n", desc.stride,
+		       p[0], p[(H / 2) * desc.stride + W / 2]);
+		AHardwareBuffer_unlock(ahb, NULL);
+	}
+#endif
 	uint32_t corner = pixels[0];
 	uint32_t centre = pixels[(H / 2) * W + W / 2];
 	printf("corner 0x%08x, centre 0x%08x\n", corner, centre);
