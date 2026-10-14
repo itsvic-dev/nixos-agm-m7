@@ -151,11 +151,15 @@ github.com/LgPWNd/Alcatel_mt6739_5059R_and_5041C_universal_kernel-4.4.95-,
 - With `ui32MaxDeadlineMS` 0 the firmware uses its default deadline: a hung fragment shader is reset after about 20 s (reason 3, guilty overrunning). If the process exits first, the firmware sees page faults instead.
 - After recovery, compute and render jobs run again.
 
+## Storage images (done)
+
+- Without `tpu_extended_integer_lookup`, Mesa set `index_lookup` in every storage image descriptor but still sent float coordinates. The TPU read 1.0 as index 0x3f800000, so only texel (0,0) worked: other loads returned 0 and other stores were lost. `mesa-ge8100.patch` no longer sets the bit.
+- `tools/vk-image` (installed as `vk-image load|store`, `WIDTH`, `HEIGHT`): R32UI image, the CPU writes or finds each texel at its twiddled offset.
+- All `vk-triangle` modes pass the readback. `TILE` and `PROBE` fail the built-in centre check by design.
+
 ## Open
 
-- Compute `imageStore`/`imageLoad` agree with each other but write outside the image (`usclib_twiddle2d`).
 - Device features copied from the GE8300 and not verified: the vendor uses `max_partitions` 6 and `isp_max_tiles_in_flight` 2 (we have 10 and 4). USC store sizes and TPU and UVS values are unknown; `libusc.so` in `/vendor/lib` may have them.
-- `vk-triangle` fails on the readback: the image in memory is correct (`RAW=1`), but the compute readback reads garbage. Also with the stock module, so not caused by HWR.
 
 ## Plan
 
