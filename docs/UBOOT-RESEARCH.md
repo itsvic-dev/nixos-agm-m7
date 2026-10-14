@@ -103,8 +103,86 @@ Main risks:
    - mtkclient (akos's laptop) is the last fallback.
    - Do not let U-Boot overwrite the partition it runs from until fastboot is proven.
 
+## 6. Boot menu design (lk2nd-like)
+
+Goal: U-Boot in `boot`, started by LK in normal boot. It shows a menu with NixOS, LineageOS, LineageOS recovery and fastboot, and has its own fastboot.
+
+### 6.1 What we get from LK's normal boot
+
+- **[src]** LK loads and starts the modem only in normal boot (see `NOTES.md`). U-Boot runs in normal boot, so every OS that U-Boot starts gets the modem. Today LineageOS boots in recovery mode and has no modem. U-Boot fixes that.
+- Both OSes use our 64-bit mainline kernel with the same `mt6739-agm-m7.dtb`. The LineageOS DTB only adds `/firmware/android` (`scripts/build-android-kernel.sh`). So U-Boot can pass the `x0` DTB (with LK's runtime data) to both kernels. For LineageOS it adds `/firmware/android` with `fdt` commands. **[inf]** No 32-bit kernel and no vendor DTB are involved; this removes the hardest problem.
+- LK charger mode also boots `boot`, with `androidboot.mode=charger` in the `x0` `/chosen/bootargs`. U-Boot must see this and boot the default OS at once, without the menu.
+
+### 6.2 Input
+
+- **[src]** The phone has a D-pad on the keypad matrix: `KEY_UP` (4,3), `KEY_DOWN` (4,4), `KEY_ENTER` (6,3), plus `KEY_LEFT`, `KEY_RIGHT`, `KEY_BACK` and the digits (`mt6739-agm-m7.dts`). So `bootmenu` can use real arrow keys. No volume-key hacks are needed.
+- **[src]** U-Boot has no MediaTek keypad driver. The keypad state is 5 read-only registers at `0x10010004` (`KPD_MEM1..5`, bits 15:0 of each, a bit is 0 when the key is down). The clock is `clk26m`.
+- **[src]** `drivers/input/button_kbd.c` turns `UCLASS_BUTTON` devices with `linux,code` into a keyboard (stdin), and maps arrows to the escape codes that `bootmenu` reads.
+- Plan **[inf]**: a small `button-mtk-keypad` driver (one child node per key, with row and column), or a `UCLASS_KEYBOARD` driver that polls `KPD_MEM`. About 100 lines either way. LK uses the keypad for its boot mode keys, so the keypad is very likely powered and configured.
+
+### 6.3 Display
+
+- The menu needs the DBI video driver from section 5 (port of `mt6739-dbi`). The panel is 240 px wide: with the 8x16 font that is 30 columns, enough for `bootmenu`.
+- Before the video driver works, the menu cannot be seen. A safe default (autoboot NixOS after a few seconds) keeps the phone usable during bring-up.
+
+### 6.4 Where each image lives
+
+| Entry | Image | Place | How U-Boot starts it |
+|---|---|---|---|
+| U-Boot | `boot.img` (U-Boot + DTB for LK) | eMMC `boot` (24 MiB) | LK, normal boot |
+| NixOS | kernel, initrd, DTB per generation | microSD, new FAT or ext4 `/boot` partition | `extlinux.conf` (`bootmeth_extlinux`), from `boot.loader.generic-extlinux-compatible` |
+| LineageOS | `boot.img` (header v0) | see open question 1 | `mmc read` + `bootm` (`CONFIG_ANDROID_BOOT_IMAGE`) |
+| LineageOS recovery | `recovery.img` | eMMC `recovery` | `bootm` from U-Boot, or set `RTC_PDN1` bit 4 and reset, so LK boots it |
+| Fastboot | none | none | `fastboot usb 0` |
+
+- **[src]** With extlinux, the menu can also list the NixOS generations. That fixes "LK has no menu, so older generations cannot be picked at boot" (`NOTES.md`). `nixos/bootloader.nix` would then stop writing `boot`.
+- **[src]** NixOS from the microSD needs MSDC1 in U-Boot. MSDC1 needs `vmch` (3.3 V) and `vmc` from the PMIC. **[inf]** LK probably does not power the card in normal boot. Then U-Boot needs pwrap (section 2) and a few PMIC regulator writes. Fallback: a NixOS `boot.img` in an eMMC partition, which needs only MSDC0.
+- If `recovery` keeps a real recovery image, LK's own recovery path ("reboot recovery", RTC bit 4) still works without U-Boot. So the recovery entry can be LK's.
+
+### 6.5 Fastboot
+
+- **[src]** U-Boot fastboot finds partitions by GPT name on `FASTBOOT_FLASH_MMC_DEV` (eMMC, `mmc 0`). Other devices use `dev:part`, for example `fastboot flash 1:super super.img` for the microSD (`do_get_part_info()` in `drivers/fastboot/fb_mmc.c`). Sparse images are supported (`IMAGE_SPARSE`).
+- **[src]** `fastboot boot` works on a full `boot.img` in RAM, with the right DTB.
+- Aliases (`fastboot_partition_alias_lineage=...`) give short names.
+- **[inf]** PIO only: a 500 MiB sparse `super` takes minutes. For `super`, `scripts/android-flash.sh` over SSH from NixOS stays faster.
+- Safety: LK fastboot stays (RTC `PDN1` bit 13, `reboot bootloader` from Linux). We do not yet know an LK key combination for fastboot or recovery at power on. Find it (LK disassembly, `mtk_detect_key`) before U-Boot replaces the NixOS `boot.img` in `boot`. Without it, a broken U-Boot that cannot start Linux needs mtkclient on akos's laptop.
+
+### 6.6 Picking the OS from a running system
+
+- `reboot recovery` keeps working (LK, RTC bit 4), it skips U-Boot.
+- For "reboot into LineageOS with modem" or "boot NixOS once", U-Boot needs a flag that survives a reset. Options:
+  1. U-Boot environment in a partition, written with `fw_setenv` from NixOS and from LineageOS (root). Simple and standard (`ENV_IS_IN_MMC`).
+  2. A magic word in reserved DRAM (the watchdog reset keeps DRAM). No storage writes, but lost on power off.
+  3. RTC `PDN1`/`PDN2` spare bits. Needs pwrap in U-Boot.
+- Recommendation: option 1, `boot_once=lineage` cleared by U-Boot after it reads it.
+
+### 6.7 Extra effort on top of section 5
+
+| Step | Effort |
+|---|---|
+| Keypad driver for `button_kbd` | 0.5 day |
+| `bootmenu` entries, charger-mode bypass, env in a partition, `fw_setenv` config | 1 day |
+| Android `boot.img` boot with `/firmware/android` fixup and `androidboot.*` from LK | 1 day |
+| MSDC1 + PMIC power for the microSD (if LK leaves it off) | 1 to 2 days |
+| NixOS: extlinux on the microSD, new bootloader module | 1 day |
+
+Total with section 5: about 2 to 3 weeks of part-time work.
+
+### 6.8 Open questions
+
+1. LineageOS `boot.img` place. Today it is in `recovery`. If `recovery` gets a real recovery image, `boot.img` needs a new place: `cache` (208 MiB), `system` (1.5 GiB) or `vendor` (504 MiB) on the eMMC are free if we do not need the old stock LineageOS GSI. Or a partition on the microSD.
+2. Does the LineageOS 24.0 device tree build a `recovery.img`? Header v0 and no A/B mean a separate image is needed.
+3. Is the old LineageOS GSI (eMMC `system`/`vendor`, FDE `userdata`) still needed?
+4. Autoboot default and delay: NixOS after 3 s?
+
+### 6.9 Alternatives
+
+- Patch LK: it is a closed binary, so every feature is reverse engineering work. U-Boot already has fastboot, menus, extlinux and Android images.
+- lk2nd: Qualcomm only. No MediaTek port exists.
+
 ## Sources
 
 - U-Boot: `drivers/usb/musb-new/mt85xx.c`, `musb_uboot.c`, `drivers/usb/gadget/udc/udc-uclass.c`, `drivers/phy/phy-mtk-tphy.c`, `drivers/mmc/mtk-sd.c`, `drivers/watchdog/mtk_wdt.c`, `drivers/power/pmic/mtk-pwrap.c`, `arch/arm/mach-mediatek/`, `configs/mt8516_pumpkin_defconfig`, `configs/mt8518_ap1_emmc_defconfig`, `arch/arm/lib/save_prev_bl_data.c`, `arch/arm/mach-snapdragon/board.c`, `doc/board/qualcomm/board.rst`, `doc/board/samsung/exynos-mobile*.rst`.
+- U-Boot boot menu: `drivers/input/button_kbd.c`, `drivers/fastboot/fb_mmc.c`, `doc/usage/cmd/bootmenu.rst`, `doc/android/fastboot.rst`, `boot/bootmeth_extlinux.c`, `boot/image-android.c`.
 - Our Linux tree: `arch/arm64/boot/dts/mediatek/mt6739.dtsi`, `drivers/usb/musb/mediatek.c`, `drivers/phy/mediatek/phy-mtk-tphy.c`, `drivers/mmc/host/mtk-sd.c`, `drivers/clk/mediatek/clk-mt6739.c`, `drivers/gpu/drm/tiny/mt6739-dbi.c`.
 - Web: https://github.com/DavidBuchanan314/rabbit_r1_boot_notes, https://github.com/DavidBuchanan314/lk-mt6765, https://gitlab.com/mt6735-mainline, https://postmarketos.org/blog/2018/04/14/lowlevel/ (no U-Boot over MediaTek LK found).
