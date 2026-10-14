@@ -17,6 +17,9 @@
 
   boot.consoleLogLevel = 8;
 
+  # With the default 3.3 MiB reserve, a full page cache starves atomic allocations in the USB network.
+  boot.kernel.sysctl."vm.min_free_kbytes" = 16384;
+
   boot.loader.agm-m7 = {
     enable = true;
     # U-Boot is in the boot partition and boots NixOS with extlinux.
