@@ -1,5 +1,21 @@
 {
   "nodes": {
+    "firmware": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1791984842,
+        "narHash": "sha256-JzVUE7UgCHTjDsIMl4CVKVMfr2JavGHIzRr5e7r28Ow=",
+        "owner": "itsvic-dev",
+        "repo": "agm-m7-firmware",
+        "rev": "0972487672065a4a79114250b634a1778722e1df",
+        "type": "github"
+      },
+      "original": {
+        "owner": "itsvic-dev",
+        "repo": "agm-m7-firmware",
+        "type": "github"
+      }
+    },
     "linux": {
       "flake": false,
       "locked": {
@@ -35,6 +51,7 @@
     },
     "root": {
       "inputs": {
+        "firmware": "firmware",
         "linux": "linux",
         "nixpkgs": "nixpkgs"
       }

@@ -7,10 +7,19 @@
       url = "github:itsvic-dev/linux-mt6739/linux-7.2";
       flake = false;
     };
+    firmware = {
+      url = "github:itsvic-dev/agm-m7-firmware";
+      flake = false;
+    };
   };
 
   outputs =
-    { nixpkgs, linux, ... }:
+    {
+      nixpkgs,
+      linux,
+      firmware,
+      ...
+    }:
     let
       pkgs = nixpkgs.legacyPackages.aarch64-linux;
       kernel = import ./pkgs/kernel.nix {
@@ -26,7 +35,7 @@
       };
       agm-m7 = nixpkgs.lib.nixosSystem {
         system = "aarch64-linux";
-        specialArgs = { inherit kernel; };
+        specialArgs = { inherit kernel firmware; };
         modules = [ ./nixos/configuration.nix ];
       };
     in

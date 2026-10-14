@@ -56,7 +56,7 @@ github.com/LgPWNd/Alcatel_mt6739_5059R_and_5041C_universal_kernel-4.4.95-,
 ## Stage 2 (done)
 
 - DT compatible `mediatek,mt6739-gpu` selects the DDK 1.9 path (`pvr_ddk19.c`). The rest of the driver is unchanged.
-- Firmware: `/vendor/firmware/rgx.fw.signed`, linked as `powervr/rogue_22.49.21.16_ddk19.fw` by `nixos/vendor.nix`.
+- Firmware: `rgx.fw.signed` from the stock vendor partition, now in the private repo `itsvic-dev/agm-m7-firmware`. `nixos/vendor.nix` installs it as `powervr/rogue_22.49.21.16_ddk19.fw`.
 - The driver synthesises the layout table and the feature set (from `rgxconfig_km_22.V.21.16.h`) instead of reading a mainline firmware trailer.
 - MIPS: 32 MiB heap at 0xC0000000, one 32 KiB contiguous page table, boot data (regs, page table, stack, `RGXFWIF_INIT`) in the boot/NMI data page, wrapper config with the physical register bank address, no trampoline.
 - `pvr_ddk19_fwif.h` has the 1.9 structs. Offsets come from the firmware DWARF (`tools/fwif-dwarf.py`) and are checked with `static_assert`.
@@ -123,7 +123,7 @@ github.com/LgPWNd/Alcatel_mt6739_5059R_and_5041C_universal_kernel-4.4.95-,
   - Transfer jobs are translated; `ISP_PIXEL_BASE` is the transfer heap base (0).
 - Display: Sway renders with pixman, so Vulkan presents through `wl_shm` from a linear image (`MESA_VK_WSI_DEBUG=sw,linear`, set system-wide).
 - vkcube runs: `vkcube --wsi wayland` in the Sway session. No HWR.
-- `powervr.service` loads the driver at boot, after `/vendor` is mounted. udev must not load it earlier, so it stays blacklisted.
+- udev loads the driver at boot. The firmware is in the Nix store, so no mount is needed first.
 
 ![vkcube on the GE8100](img/vkcube.png)
 

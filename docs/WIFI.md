@@ -1,6 +1,6 @@
 # Wi-Fi research
 
-Status: Wi-Fi starts at boot and connects with iwd (2026-10-11). `mt6739-consys` powers CONSYS on and brings up the WMT firmware, and the vendor gen2 driver (`drivers/staging/mt6739-wlan`) runs Wi-Fi. NixOS loads the firmware from the phone's vendor partition (`nixos/vendor.nix`). See `CONSYS-RE.md` and `WMT-PROTOCOL.md`.
+Status: Wi-Fi starts at boot and connects with iwd (2026-10-11). `mt6739-consys` powers CONSYS on and brings up the WMT firmware, and the vendor gen2 driver (`drivers/staging/mt6739-wlan`) runs Wi-Fi. NixOS gets the firmware from the private repo `itsvic-dev/agm-m7-firmware` (`nixos/vendor.nix`). See `CONSYS-RE.md` and `WMT-PROTOCOL.md`.
 
 ## What the stock system uses
 
@@ -26,7 +26,7 @@ Status: Wi-Fi starts at boot and connects with iwd (2026-10-11). `mt6739-consys`
 3. Done: BTIF in PIO mode (`/sys/kernel/debug/mt6739-consys/btif`, `power`). The WMT/STP bring-up was first done from userspace over this node, then moved into `mt6739-consys` (`mt6739_consys_get()`): MAND to FULL mode, both ROM patches (1_1 then 1_0), resets, MCU clock, LTE coex, RF calibration, coex, co-clock, FM strap. Every step returns the expected event.
 4. Done: the gen2 Wi-Fi driver over the AHB host interface (0x180f0000, IRQ SPI 234, AP DMA HIF channel). It downloads `WIFI_RAM_CODE_6755` with `request_firmware()`. A WMT shim replaces `wmt_drv.ko`, calls `mt6739_consys_get()`, and probes when the module loads (`autostart`). `wlan_on=0`/`1` stops and starts Wi-Fi with CONSYS. Current kernels refuse to DMA-map vmalloc memory, so the HIF copies those buffers through kmalloc memory.
 5. Done: NVRAM. The driver requests `mt6739-wlan-nvram.bin`, which NixOS links to `/nvdata/APCFG/APRDEB/WIFI` (1024-byte `WIFI_CFG_PARAM_STRUCT` plus a 2-byte trailer). It has the MAC address (offset 4) and the RF settings. Without it the MAC changes on every boot and the scan shows a fake open network `NVRAM WARNING: Err = 0x01`.
-6. Done: Wi-Fi at boot (`nixos/wifi.nix` loads the module after `/vendor` is mounted) and the WMT bring-up in the kernel.
+6. Done: Wi-Fi at boot (`nixos/wifi.nix` loads the module after `/nvdata` is mounted) and the WMT bring-up in the kernel.
 7. Later: maybe a clean driver that uses the vendor driver as reference.
 
 MediaTek's MT6739 platform source for the WMT stack is public in github.com/gemian/cosmo-linux-kernel-4.4 (`drivers/misc/mediatek/connectivity/common/common_main/`).

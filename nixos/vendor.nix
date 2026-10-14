@@ -1,4 +1,9 @@
-{ lib, pkgs, ... }:
+{
+  lib,
+  pkgs,
+  firmware,
+  ...
+}:
 
 let
   files = [
@@ -21,7 +26,6 @@ let
   };
 in
 {
-  fileSystems."/vendor" = readOnly "vendor";
   fileSystems."/nvdata" = readOnly "nvdata";
   fileSystems."/protect_f" = readOnly "protect1";
   fileSystems."/protect_s" = readOnly "protect2";
@@ -31,11 +35,11 @@ in
     (pkgs.runCommand "vendor-firmware" { } ''
       mkdir -p $out/lib/firmware
       for f in ${lib.escapeShellArgs files}; do
-        ln -s /vendor/firmware/$f $out/lib/firmware/$f
+        cp ${firmware}/proprietary/vendor/firmware/$f $out/lib/firmware/$f
       done
       ln -s /nvdata/APCFG/APRDEB/WIFI $out/lib/firmware/mt6739-wlan-nvram.bin
       mkdir -p $out/lib/firmware/powervr
-      ln -s /vendor/firmware/rgx.fw.signed $out/lib/firmware/powervr/rogue_22.49.21.16_ddk19.fw
+      cp ${firmware}/proprietary/vendor/firmware/rgx.fw.signed $out/lib/firmware/powervr/rogue_22.49.21.16_ddk19.fw
     '')
   ];
 }
