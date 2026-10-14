@@ -148,7 +148,9 @@ fn dir_entry(meta: Option<&fs::Metadata>) -> Vec<u8> {
 
 fn statvfs(path: &Path) -> Option<libc::statvfs> {
     let c = CString::new(path.as_os_str().as_encoded_bytes()).ok()?;
+    // SAFETY: statvfs is plain old data, so all zeros is a valid value.
     let mut st: libc::statvfs = unsafe { std::mem::zeroed() };
+    // SAFETY: c is a NUL-terminated path and st is a valid out pointer.
     (unsafe { libc::statvfs(c.as_ptr(), &mut st) } == 0).then_some(st)
 }
 
@@ -219,10 +221,10 @@ impl Fsd {
     fn close(&mut self, h: u32) -> i32 {
         match self.handles.get_mut(h as usize).and_then(Option::take) {
             Some(Handle::File { file, flags }) => {
-                if flags & (O_COMMITTED | O_CREATE | O_CREATE_ALWAYS) != 0 {
-                    if let Err(e) = file.sync_all() {
-                        return errno(&e);
-                    }
+                if flags & (O_COMMITTED | O_CREATE | O_CREATE_ALWAYS) != 0
+                    && let Err(e) = file.sync_all()
+                {
+                    return errno(&e);
                 }
                 0
             }
@@ -447,7 +449,7 @@ impl Fsd {
             },
             0x100a => vec![res(match self.path(a[0]) {
                 Ok(p) if p.is_dir() => {
-                    let bsize = statvfs(&p).map_or(4096, |s| s.f_bsize as u64);
+                    let bsize = statvfs(&p).map_or(4096, |s| s.f_bsize);
                     match Self::folder_size(&p, bsize) {
                         Ok(c) if le32(a[1]) == 2 => c as i32,
                         Ok(c) => (c * bsize) as i32,
