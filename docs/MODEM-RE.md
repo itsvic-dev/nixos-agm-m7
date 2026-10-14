@@ -338,3 +338,14 @@ modem@10014000 {
 - Interface id = 100 * n + ccmni index (100 ccmni0, 201 ccmni1, 302 ccmni2). The MD then sends RPC 0x400d `{net_if 0, lhif_q 2}`.
 - Without steps 1 to 3, `AT+EAPNACT` and `AT+CGACT` fail (`CME ERROR: 5745`, `5873`, `5841`). Before step 6 the MD takes uplink packets but sends no downlink.
 - Result: `ip addr add <ipv4>/32 dev wwan0`, ping 1.1.1.1 about 25 ms, 20 MB download at 4.6 MB/s (37 Mbit/s), no CLDMA errors.
+
+## 10. LineageOS (2026-10-14)
+
+Manual test on LineageOS 24.0 with our kernel, LK in normal mode (U-Boot in `boot`), static `ccci-fsd` from Nix (`pkgsStatic`), root ADB:
+
+- Same steps as `nixos/modem.nix`: mount `protect1`/`protect2` read-only, seed a copy of `nvdata/md`, `md_cmn`, `protect_f/md`, `protect_s/md`, start `ccci-fsd /dev/ccci_fs <copy>`, write 1 to the driver `state`. `/dev/wwan0at0` and `wwan0` appear, the modem is `ready`.
+- AT, in the order ModemManager uses on NixOS (trace in `logs/modem/nixos-mm-debug.log`): `ATE0`, `AT+CMEE=1`, `AT+EBOOT=0`, `AT+EFUN=0` (SIM on), `AT+CPIN?`, `AT+CFUN=1`, `AT+EIFCONFIG=3`, `AT+EIAREG=1` (CME 100, harmless), `AT+EDALLOW=1`, `AT+CGATT=1` (LTE attach), `AT+EIAAPN="internet",0`, `AT+EAPNACT=1,"internet","default",0`, `AT+EIF=<ifid>,"ifst","up",1`, `AT+EPDN=<aid>,"ifst",20`. Then the IPv4 address /32 on `wwan0`, a routing table for `wwan0`, and ping works.
+- With an NVRAM copy that an earlier, broken command order had changed, `+EAPNSET` gave a plain `ERROR` and `+CGATT=1` hung the AT channel (no answer, no URC) until a reboot. With the NVRAM copy from NixOS, `+EAPNSET` gives `CME ERROR: 5841` (APN already in the table) and `+CGATT=1` attaches at once. Not yet tested: a truly fresh copy of the stock `nvdata` with the clean order.
+- `adb push` of larger files broke the USB connection until `vm.min_free_kbytes` was raised to 16384, as on NixOS.
+- Do not run one `cat` reader and `echo >>` markers into the same file: the reader overwrites from its own offset. Append from both sides (`>>`).
+
