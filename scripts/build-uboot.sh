@@ -10,5 +10,15 @@ make -C '$here/u-boot' O='$out' -j\$(nproc) u-boot.bin"
 
 parts=$(nix build "$here#packages.aarch64-linux.boot-parts" --no-link --print-out-paths)
 gzip -9 -n -c "$out/u-boot.bin" > "$out/u-boot.bin.gz"
-python3 "$here/scripts/mkboot.py" --kernel "$out/u-boot.bin.gz" --dtb "$parts/mt6739-agm-m7.dtb" -o "$out/boot.img"
+# LK reads the last 512 KiB of the kernel blob to find the DTB, so a smaller blob fails to boot.
+truncate -s 1M "$out/u-boot.bin.gz"
+# LK does not start a boot.img without a ramdisk, so add an empty cpio.
+python3 -c "
+import gzip, sys
+name = b'TRAILER!!!\\0'
+h = b'070701' + b''.join(b'%08X' % v for v in [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, len(name), 0]) + name
+h += b'\\0' * (-len(h) % 512)
+open(sys.argv[1], 'wb').write(gzip.compress(h, mtime=0))
+" "$out/ramdisk.cpio.gz"
+python3 "$here/scripts/mkboot.py" --kernel "$out/u-boot.bin.gz" --dtb "$parts/mt6739-agm-m7.dtb" --ramdisk "$out/ramdisk.cpio.gz" -o "$out/boot.img"
 ls -l "$out/u-boot.bin" "$out/boot.img"
