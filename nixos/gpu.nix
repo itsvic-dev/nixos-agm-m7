@@ -11,10 +11,14 @@
           eglPlatforms = [ "wayland" ];
         }).overrideAttrs
           (old: {
-            patches = old.patches ++ [
-              ./patches/mesa-ge8100.patch
-              ./patches/mesa-zink-shm.patch
-            ];
+            version = "26.2.3";
+            src = pkgs.fetchFromGitHub {
+              owner = "itsvic-dev";
+              repo = "mesa";
+              rev = "67422666a47ffdcb9339e1707cadd772efd8b370";
+              hash = "sha256-JgACXFMvHuagCzO41sA99kOd4wbsmfGClaaL1rOdr+4=";
+            };
+            patches = old.patches ++ [ ./patches/mesa-zink-shm.patch ];
             # rusticl is not built.
             postFixup = builtins.replaceStrings [ "$opencl/lib/libRusticlOpenCL.so" ] [ "" ] old.postFixup;
             # Dozen is not built, so nothing lands in this output.
