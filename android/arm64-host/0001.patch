@@ -1,0 +1,23 @@
+Subject: [arm64-host 0001] envsetup.sh: get_host_prebuilt_prefix -> linux-arm64 on aarch64
+
+Fixes `one-true-awk: cannot execute binary file: Exec format error` when sourcing
+build/envsetup.sh on an aarch64 host (it was using the x86 build-tools prefix). The root
+`build/envsetup.sh` is a symlink, so the patch targets the real file in `build/make`.
+
+--- a/build/make/envsetup.sh
++++ b/build/make/envsetup.sh
+@@ -137,8 +137,13 @@
+ function get_host_prebuilt_prefix
+ {
+   local un=$(uname)
++  local um=$(uname -m)
+   if [[ $un == "Linux" ]] ; then
+-    echo linux-x86
++    if [[ $um == "aarch64" ]] ; then
++      echo linux-arm64
++    else
++      echo linux-x86
++    fi
+   elif [[ $un == "Darwin" ]] ; then
+     echo darwin-x86
+   else

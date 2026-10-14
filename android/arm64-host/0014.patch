@@ -1,0 +1,15 @@
+Subject: [arm64-host 0014] jar-wrapper: default host Java tools to -Xmx8g
+
+Metalava OOMed on the 8 GB arm64 host because java_binary_host wrappers ran with the JVM default
+heap. Add a default cap before forwarded `-J` options so tool-specific `-J-Xmx...` values still win.
+
+--- a/build/soong/scripts/jar-wrapper.sh
++++ b/build/soong/scripts/jar-wrapper.sh
+@@ -55,4 +55,6 @@ while expr "x$1" : 'x-J' >/dev/null; do
+     shift
+ done
+ 
+-exec java "${javaOpts[@]}" -jar ${jardir}/${jarfile} "$@"
++# arm64-host (#28): default max-heap so heap-hungry tools (metalava) do not OOM on the 8 GB box;
++# a tool-supplied -J-Xmx is appended after and overrides this (JVM uses the last -Xmx).
++exec java -Xmx8g "${javaOpts[@]}" -jar ${jardir}/${jarfile} "$@"

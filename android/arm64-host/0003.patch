@@ -1,0 +1,43 @@
+Subject: [arm64-host 0003] soong/rust: wire arm64 host into prebuilt rust-sysroot-std
+
+Makes `prebuilt_libstd` (rust_stdlib_prebuilt_host) enable for the linux_musl_arm64 host.
+Upstream toolchain_library.go only enumerates x86/darwin host platforms, so on an arm64 build
+prebuilt_libstd was always disabled (everything else hit the else->disable branch). Adds a
+Linux_musl_arm64 target field + an arm64 branch keyed on BuildOS==LinuxMusl && BuildArch==Arm64,
+and guards the existing musl-x86 branch with BuildArch==X86_64 so it stops matching the arm64 build.
+
+Requires a sibling `prebuilts/rust-toolchain/linux-arm64/Android.bp` so `platform == "linux-arm64"`,
+plus the arm64 musl Rust toolchain under `prebuilts/rust-toolchain/linux-arm64/<ver>/`.
+
+--- a/build/soong/rust/toolchain_library.go
++++ b/build/soong/rust/toolchain_library.go
+@@ -153,6 +153,7 @@ type hostPrebuiltProps struct {
+ 		Linux_glibc_x86    hostPrebuiltTargetProps
+ 		Linux_musl_x86_64  hostPrebuiltTargetProps
+ 		Linux_musl_x86     hostPrebuiltTargetProps
++		Linux_musl_arm64   hostPrebuiltTargetProps
+ 		Darwin_x86_64      hostPrebuiltTargetProps
+ 	}
+ }
+@@ -176,9 +177,11 @@ func constructLibProps(rlib, solib bool) func(ctx android.LoadHookContext) {
+ 		if platform == "linux-x86" && ctx.Config().BuildOS == android.Linux {
+ 			p.Target.Linux_glibc_x86_64.addPrebuiltToTarget(ctx, name, rustDir, "linux-x86", "x86_64-unknown-linux-gnu", rlib, solib)
+ 			p.Target.Linux_glibc_x86.addPrebuiltToTarget(ctx, name, rustDir, "linux-x86", "i686-unknown-linux-gnu", rlib, solib)
+-		} else if platform == "linux-musl-x86" && ctx.Config().BuildOS == android.LinuxMusl {
++		} else if platform == "linux-musl-x86" && ctx.Config().BuildOS == android.LinuxMusl && ctx.Config().BuildArch == android.X86_64 {
+ 			p.Target.Linux_musl_x86_64.addPrebuiltToTarget(ctx, name, rustDir, "linux-musl-x86", "x86_64-unknown-linux-musl", rlib, solib)
+ 			p.Target.Linux_musl_x86.addPrebuiltToTarget(ctx, name, rustDir, "linux-musl-x86", "i686-unknown-linux-musl", rlib, solib)
++		} else if platform == "linux-arm64" && ctx.Config().BuildOS == android.LinuxMusl && ctx.Config().BuildArch == android.Arm64 {
++			p.Target.Linux_musl_arm64.addPrebuiltToTarget(ctx, name, rustDir, "linux-arm64", "aarch64-unknown-linux-musl", rlib, solib)
+ 		} else if platform == "darwin" && ctx.Config().BuildOS == android.Darwin {
+ 			p.Target.Darwin_x86_64.addPrebuiltToTarget(ctx, name, rustDir, "darwin-x86", "x86_64-apple-darwin", rlib, solib)
+ 		} else {
+
+--- /dev/null
++++ b/prebuilts/rust-toolchain/linux-arm64/Android.bp
+@@ -0,0 +1,5 @@
++rust_stdlib_prebuilt_host {
++    name: "libstd",
++    crate_name: "std",
++    sysroot: true,
++}

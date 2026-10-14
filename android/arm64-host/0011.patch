@@ -1,0 +1,10 @@
+--- a/build/soong/java/kotlin.go
++++ b/build/soong/java/kotlin.go
+@@ -476,6 +476,7 @@ var kspProcessingRule = pctx.AndroidRemoteStaticRule("ksp", android.RemoteRuleSu
+ 			inputDeltaCmd + ` && ` +
+ 			kotlinZipSyncCmd + ` && ` +
+ 			`${config.KotlinKspClientBinary} ` +
++			` ${config.KotlincHeapFlags} ` + // arm64-host (#25): avoid KSP JVM OOM on big modules
+ 			` -jvm-target=$kotlinJvmTarget ` +
+ 			` -project-base-dir=. ` +
+ 			` -module-name=$name ` +

@@ -1,0 +1,11 @@
+Subject: [arm64-host 0010] REVERTED: rust/compiler: force host rust to from-source libstd/corelibs
+
+Final Orin state: REVERTED. Do not apply this as part of the final arm64-host patch set.
+
+This was an intermediate #22 attempt to force all arm64 host Rust modules onto from-source
+`libstd` plus `config.Corelibs`. It solved one generated-staticlib SVH mismatch but regressed
+proc-macro crates: `proc_macro` is prebuilt-only and tied to the raw prebuilt std/core SVH.
+
+The final #22 direction is the opposite: keep the host Rust graph all-prebuilt and make
+`TransformRlibstoStaticlib` drop from-source sysroot inputs before pinning the raw prebuilt
+sysroot directory. See patch 0009.

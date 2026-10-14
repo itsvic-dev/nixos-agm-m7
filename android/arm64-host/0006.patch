@@ -1,0 +1,39 @@
+Subject: [arm64-host 0006] soong/paths: host-out dir naming for the arm64 build host
+
+Two related fixes in pathForInstall() so Make and Soong agree on out/host/<tag> on an arm64 host
+(everything should be "linux-arm64", matching the envsetup.mk #8 patch / HOST_PREBUILT_ARCH:=arm64):
+
+(1) Collapse the LinuxMusl OsType name to "linux" for the build's own host (not just under the
+    UseHostMusl opt-in, which is false on arm64 where BuildOS is forced to LinuxMusl). Fixes the kati
+    SOONG_ZIP make-vars check (Make linux-arm64 vs Soong linux_musl-arm64).
+(2) For Common/X86_64 host modules (arch-neutral java tools etc.) the archName was hardcoded "x86"
+    (legacy, tied to the old HOST_PREBUILT_ARCH:=x86). On an arm64 build host use "arm64" so e.g.
+    signapk.jar installs to out/host/linux-arm64/framework/ where consumers (apex etc.) look for it.
+
+--- a/build/soong/android/paths.go
++++ b/build/soong/android/paths.go
+@@ -2031,9 +2031,10 @@
+ 			// instead of linux_glibc
+ 			osName = "linux"
+ 		}
+-		if os == LinuxMusl && ctx.Config().UseHostMusl() {
++		if os == LinuxMusl && (ctx.Config().UseHostMusl() || os == ctx.Config().BuildOS) {
+ 			// When using musl instead of glibc, use "linux" instead of "linux_musl".  When cross
+-			// compiling we will still use "linux_musl".
++			// compiling we will still use "linux_musl". (arm64-host: BuildOS is forced to LinuxMusl
++			// without the UseHostMusl opt-in, so also collapse for the build host itself.)
+ 			osName = "linux"
+ 		}
+ 
+@@ -2044,6 +2045,11 @@
+ 		archName := arch.String()
+ 		if os.Class == Host && (arch == X86_64 || arch == Common) {
+ 			archName = "x86"
++			if ctx.Config().BuildArch == Arm64 {
++				// arm64 build host: HOST_PREBUILT_ARCH is arm64 (envsetup.mk patch), so
++				// arch-neutral / x86_64 host modules install under linux-arm64, not linux-x86.
++				archName = "arm64"
++			}
+ 		}
+ 		partitionPaths = []string{"host", osName + "-" + archName, partition}
+ 	}

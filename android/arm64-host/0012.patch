@@ -1,0 +1,50 @@
+Subject: [arm64-host 0012] sepolicy: use int for getopt results on aarch64
+
+On aarch64, plain `char` is unsigned. Storing `getopt()` / `getopt_long()`'s `-1`
+end-of-options sentinel in `char` turns it into `0xff`, so option parsing runs one
+extra iteration and falls into the usage/error path. Use `int`, as getopt requires.
+
+--- a/system/sepolicy/tools/checkfc.c
++++ b/system/sepolicy/tools/checkfc.c
+@@ -444,7 +444,7 @@ int main(int argc, char **argv)
+   bool allow_empty = false;
+   bool compare = false;
+   bool test_data = false;
+-  char c;
++  int c;
+ 
+   filemode mode = filemode_file_contexts;
+ 
+--- a/system/sepolicy/tools/sepolicy-analyze/attribute.c
++++ b/system/sepolicy/tools/sepolicy-analyze/attribute.c
+@@ -75,7 +75,7 @@ int attribute_func (int argc, char **argv, policydb_t *policydb) {
+     int rc = -1;
+     int list = 0;
+     int reverse = 0;
+-    char ch;
++    int ch;
+ 
+     struct option attribute_options[] = {
+         {"list", no_argument, NULL, 'l'},
+--- a/system/sepolicy/tools/sepolicy-analyze/neverallow.c
++++ b/system/sepolicy/tools/sepolicy-analyze/neverallow.c
+@@ -493,7 +493,7 @@ static int check_neverallows_string(policydb_t *policydb, char *string, size_t l
+ 
+ int neverallow_func (int argc, char **argv, policydb_t *policydb) {
+     char *rules = 0, *file = 0;
+-    char ch;
++    int ch;
+ 
+     struct option neverallow_options[] = {
+         {"debug", no_argument, NULL, 'd'},
+--- a/system/sepolicy/tools/sepolicy-check.c
++++ b/system/sepolicy/tools/sepolicy-check.c
+@@ -236,7 +236,7 @@ int main(int argc, char **argv)
+ 	policydb_t policydb;
+ 	struct policy_file pf;
+ 	sidtab_t sidtab;
+-	char ch;
++	int ch;
+ 	int match = 1;
+ 
+ 	struct option long_options[] = {

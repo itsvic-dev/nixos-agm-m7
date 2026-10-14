@@ -1,0 +1,13 @@
+Subject: [arm64-host 0008] REVERTED: rust/toolchain_library: omit raw prebuilt sysroot -L
+
+Final Orin state: REVERTED. Do not apply this as part of the final arm64-host patch set.
+
+This was an intermediate #22 attempt to omit the raw prebuilt rust sysroot directory from
+`Link_dirs` for `aarch64-unknown-linux-musl`. It was wrong for two reasons:
+
+- host rlib-std crates such as `anstyle` rely on the raw prebuilt `-L` to find prebuilt core;
+- the raw prebuilt directory still leaked into generated staticlibs through per-rlib paths anyway.
+
+The final #22 fix is the all-prebuilt staticlib pinning in patch 0009. Orin's final
+`build/soong/rust/toolchain_library.go` keeps the normal `Link_dirs` behavior, with only the
+arm64-host prebuilt target wiring from patch 0003.

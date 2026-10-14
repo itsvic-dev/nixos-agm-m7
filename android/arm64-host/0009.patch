@@ -1,0 +1,36 @@
+Subject: [arm64-host 0009] rust/builder: pin generated staticlibs to the prebuilt Rust sysroot
+
+Final #22 fix. Keep host Rust all-prebuilt because proc_macro is prebuilt-only and SVH-tied to
+the raw prebuilt std/core. For generated staticlibs, drop from-source sysroot link dirs and rlibs,
+then pin the raw prebuilt sysroot directory so std/core resolve from one coherent toolchain.
+
+--- a/build/soong/rust/builder.go
++++ b/build/soong/rust/builder.go
+@@ -206,6 +207,27 @@ func TransformRlibstoStaticlib(ctx android.ModuleContext, mainSrc android.Path,
+ 
+ 	mod := ctx.Module().(cc.LinkableInterface)
+ 	toolchain := config.FindToolchain(ctx.Os(), ctx.Arch())
++
++	if ctx.Host() && ctx.Arch().ArchType.String() == "arm64" {
++		// all-prebuilt (#22): proc_macro is prebuilt-only and rigidly tied to the raw prebuilt
++		// std/core SVH, so the entire host rust graph (rlibs + proc-macros) uses the raw prebuilt
++		// sysroot. This synthetic staticlib otherwise pulls a FROM-SOURCE libstd + *.rust_sysroot
++		// (different SVH) that conflicts with its prebuilt rlib inputs (E0464 dup / E0460 SVH).
++		// Drop the from-source sysroot link-dirs + the from-source std/sysroot rlibs, then pin the
++		// raw prebuilt sysroot dir so std/core resolve from the one consistent prebuilt toolchain.
++		rustPathDeps.linkDirs = slices.DeleteFunc(rustPathDeps.linkDirs, func(d string) bool {
++			return strings.Contains(d, ".rust_sysroot/") || strings.Contains(d, "/libstd/linux_musl_arm64")
++		})
++		rustPathDeps.RLibs = slices.DeleteFunc(rustPathDeps.RLibs, func(l RustLibrary) bool {
++			p := l.Path.String()
++			return strings.Contains(p, ".rust_sysroot") || strings.Contains(p, "/libstd/linux_musl_arm64")
++		})
++		rawDir := filepath.Join("prebuilts/rust-toolchain", ctx.Config().PrebuiltOS(),
++			config.RustDefaultVersion, "lib/rustlib", toolchain.RustTriple(), "lib")
++		if !slices.Contains(rustPathDeps.linkDirs, rawDir) {
++			rustPathDeps.linkDirs = append(rustPathDeps.linkDirs, rawDir)
++		}
++	}
+ 	t := transformProperties{
+ 		// Crate name can be a predefined value as this is a staticlib and
+ 		// it does not need to be unique. The crate name is used for name

@@ -1,0 +1,91 @@
+Subject: [arm64-host 0004] prebuilts/build-tools: enable bison/flex/m4/make for arm64 host
+
+These prebuilt_build_tool modules were gated `arch: { x86_64: { enabled: true } }` with
+`target.linux.src` hardcoded to linux-x86. This adds arm64 enablement and a linux_musl_arm64
+target for bison/flex/m4/make.
+
+On Orin the `linux-arm64/bin/{bison,flex,m4}` files were also replaced with glibc host binaries,
+with the original musl binaries kept as `.musl`. That binary replacement is not represented in
+this source patch.
+
+--- a/prebuilts/build-tools/Android.bp
++++ b/prebuilts/build-tools/Android.bp
+@@ -84,12 +84,19 @@ prebuilt_build_tool {
+         x86_64: {
+             enabled: true,
+         },
++        arm64: {
++            enabled: true,
++        },
+     },
+     target: {
+         darwin: {
+             src: "darwin-x86/bin/bison",
+             deps: ["darwin-x86/lib64/libc++.dylib"],
+         },
++        linux_musl_arm64: {
++            src: "linux-arm64/bin/bison",
++            deps: ["linux-arm64/lib64/libc_musl.so"],
++        },
+         linux: {
+             src: "linux-x86/bin/bison",
+             deps: ["linux-x86/lib64/libc++.so"],
+@@ -105,12 +112,19 @@ prebuilt_build_tool {
+         x86_64: {
+             enabled: true,
+         },
++        arm64: {
++            enabled: true,
++        },
+     },
+     licenses: ["prebuilts_build-tools_flex_license"],
+     target: {
+         darwin: {
+             src: "darwin-x86/bin/flex",
+         },
++        linux_musl_arm64: {
++            src: "linux-arm64/bin/flex",
++            deps: ["linux-arm64/lib64/libc_musl.so"],
++        },
+         linux: {
+             src: "linux-x86/bin/flex",
+         },
+@@ -125,12 +139,19 @@ prebuilt_build_tool {
+         x86_64: {
+             enabled: true,
+         },
++        arm64: {
++            enabled: true,
++        },
+     },
+     licenses: ["prebuilts_build-tools_gnu_license"],
+     target: {
+         darwin: {
+             src: "darwin-x86/bin/m4",
+         },
++        linux_musl_arm64: {
++            src: "linux-arm64/bin/m4",
++            deps: ["linux-arm64/lib64/libc_musl.so"],
++        },
+         linux: {
+             src: "linux-x86/bin/m4",
+         },
+@@ -144,11 +165,18 @@ prebuilt_build_tool {
+         x86_64: {
+             enabled: true,
+         },
++        arm64: {
++            enabled: true,
++        },
+     },
+     target: {
+         darwin: {
+             src: "darwin-x86/bin/make",
+         },
++        linux_musl_arm64: {
++            src: "linux-arm64/bin/make",
++            deps: ["linux-arm64/lib64/libc_musl.so"],
++        },
+         linux: {
+             src: "linux-x86/bin/make",
+         },
