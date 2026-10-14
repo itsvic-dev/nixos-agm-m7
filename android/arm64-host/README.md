@@ -29,3 +29,5 @@ Prebuilts:
   `bison.real`. The binary has the linux-x86 install path built in and cannot find its data.
 - `prebuilts/jdk/jdk21/linux-arm64`: Ubuntu `openjdk-21-jdk-headless`. Untracked in the jdk21 project.
 - `prebuilts/jdk/jdk8/linux-arm64 -> linux-x86`: Soong only reads the JDK 8 jars (`rt.jar`, `jce.jar`).
+- `prebuilts/mesa-build-dep`: x86-64 only (`meson`, `mesa_clc`, `pco_clc`, `glslangValidator`). They run through
+  OrbStack's Rosetta binfmt. The Mesa cross build also runs `/usr/bin/pkg-config`, so the VM needs the `pkgconf` package, plus `python3-packaging` and `ninja-build` for meson.
