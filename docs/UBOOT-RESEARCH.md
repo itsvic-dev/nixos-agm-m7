@@ -217,7 +217,7 @@ U-Boot tree: `u-boot/` (worktree of `ref/u-boot`, branch `agm-m7`). Build: `scri
 - Boot partition (2026-10-14): `vendor` is FAT32, label `AGMBOOT` (backup in `backup/vendor-2026-10-14/`). `nixos/bootloader.nix` writes `/extlinux/extlinux.conf` and `/nixos/` with the stock extlinux builder (`-t -1 -r`, 8 generations), deletes the `MENU TITLE` line (any MENU line makes U-Boot ask) and shortens the labels to fit 30 columns. It still writes `boot.img` to `boot` while U-Boot is in `recovery`. LineageOS `boot.img` and `recovery.img` are in `/android/`.
 - U-Boot menu: NixOS (`sysboot`, default after 3 s), NixOS generations (`sysboot -p`), LineageOS, LineageOS recovery, NixOS `boot.img`, Reboot. All of them boot. `ft_board_setup` puts the LK `/chosen/bootargs` before the OS arguments. `lk_bootmode` (third word of `/chosen/atag,boot`: 0 normal, 2 recovery, 8/9 charging) skips the menu in charger mode. The NixOS initrd needs `SUPPORT_RAW_INITRD`.
 - LK already adds `/firmware/android` (from the ODM overlay); U-Boot only sets `boot_devices`.
-- LineageOS recovery: ADB shows `unauthorized`. Recovery has `ro.adb.secure=1`, and its `/adb_keys` points to `/product`, which recovery does not mount. To fix in the LineageOS device tree. The recovery UI is far too large for 240 px.
+- LineageOS recovery: ADB shows `unauthorized` until "Advanced > Enable ADB" in the recovery menu (D-pad works). Then `adb shell` is root. The recovery UI is far too large for 240 px.
 - Host edits are sometimes not yet visible in the OrbStack VM when the build starts at once. `build-uboot.sh` then builds the old defconfig. Wait a second or check `out-uboot/.config`.
 
 ## Sources
