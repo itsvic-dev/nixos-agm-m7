@@ -145,7 +145,7 @@ Goal: U-Boot in `boot`, started by LK in normal boot. It shows a menu with NixOS
 - **[src]** `fastboot boot` works on a full `boot.img` in RAM, with the right DTB.
 - Aliases (`fastboot_partition_alias_lineage=...`) give short names.
 - **[inf]** PIO only: a 500 MiB sparse `super` takes minutes. For `super`, `scripts/android-flash.sh` over SSH from NixOS stays faster.
-- Safety: LK fastboot stays (RTC `PDN1` bit 13, `reboot bootloader` from Linux). We do not yet know an LK key combination for fastboot or recovery at power on. Find it (LK disassembly, `mtk_detect_key`) before U-Boot replaces the NixOS `boot.img` in `boot`. Without it, a broken U-Boot that cannot start Linux needs mtkclient on akos's laptop.
+- Safety: LK fastboot stays (RTC `PDN1` bit 13, `reboot bootloader` from Linux). There is no LK key combination at power on (section 6.10). A broken U-Boot that cannot start Linux needs mtkclient on akos's laptop.
 
 ### 6.6 Picking the OS from a running system
 
@@ -179,6 +179,18 @@ Total with section 5: about 2 to 3 weeks of part-time work.
 
 - Patch LK: it is a closed binary, so every feature is reverse engineering work. U-Boot already has fastboot, menus, extlinux and Android images.
 - lk2nd: Qualcomm only. No MediaTek port exists.
+
+### 6.10 LK boot keys
+
+- **[src]** LK disassembly (`re/lk.img`, function at `0x460030f4`, `mtk_detect_key()` at `0x46004c0c`). LK polls keys for about 50 ms before normal boot:
+  - Key `0x11` (`MT65XX_BOOT_MENU_KEY`): LK shows "Select Boot Mode" with Recovery and Fastboot (`0x46004fb0`). `MT65XX_RECOVERY_KEY` is also `0x11`, so the menu always wins.
+  - Key `0` (`MT65XX_FACTORY_KEY`): factory mode. LK skips this check after a PMIC reset.
+- **[src]** `mtk_detect_key()` key codes: `8` is the PMIC power key (`TOPSTATUS` `0x24` bit 1), `0x11` is the PMIC home key (`TOPSTATUS` bit 3), other codes up to `0x47` are keypad bits (`KPD_MEM` at `0x10010004`, 16 bits per register, 0 = pressed).
+- Test on the phone (2026-10-14, `getevent` on LineageOS with our kernel, every key pressed): the keypad sends 20 keys (digits, `*`, `#`, D-pad, `ENTER`, `MENU`, `BACK`, `SEND`, `F11`), the PMIC sends only `KEY_POWER`. No `KEY_HOME`, and keypad position (0, 0) is not used. So neither the boot menu key nor the factory key exists on this phone. LK has no reachable boot key.
+- Consequence: the safe rollout is the only safety net.
+  1. Test U-Boot from `recovery` (LK starts it only after `reboot recovery`). NixOS stays in `boot`.
+  2. Move U-Boot to `boot` only when it starts NixOS by default, reliably, without any key press.
+  3. U-Boot's own fastboot and a "LK fastboot" menu entry (RTC bit 13, needs pwrap) come before risky features.
 
 ## Sources
 
