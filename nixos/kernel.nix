@@ -17,5 +17,9 @@
 
   boot.consoleLogLevel = 8;
 
-  boot.loader.agm-m7.enable = true;
+  boot.loader.agm-m7 = {
+    enable = true;
+    # U-Boot is in the boot partition and boots NixOS with extlinux.
+    device = null;
+  };
 }
