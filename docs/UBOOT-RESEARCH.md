@@ -128,17 +128,21 @@ Goal: U-Boot in `boot`, started by LK in normal boot. It shows a menu with NixOS
 
 ### 6.4 Where each image lives
 
+Decided (2026-10-14): the eMMC `vendor` partition (504 MiB) becomes a FAT boot partition. LineageOS 24.0 has its own `vendor` in `super` on the microSD, and NixOS takes its 5 firmware files from the `agm-m7-firmware` repo, so nothing uses `vendor` now. The GPT label stays, so LK sees no change. Backup: `backup/vendor-2026-10-14/vendor.img`.
+
 | Entry | Image | Place | How U-Boot starts it |
 |---|---|---|---|
 | U-Boot | `boot.img` (U-Boot + DTB for LK) | eMMC `boot` (24 MiB) | LK, normal boot |
-| NixOS | kernel, initrd, DTB per generation | microSD, new FAT or ext4 `/boot` partition | `extlinux.conf` (`bootmeth_extlinux`), from `boot.loader.generic-extlinux-compatible` |
-| LineageOS | `boot.img` (header v0) | see open question 1 | `mmc read` + `bootm` (`CONFIG_ANDROID_BOOT_IMAGE`) |
+| NixOS | kernel, initrd, DTB per generation | `vendor` FAT: `/extlinux/extlinux.conf` and `/nixos/` | `bootmeth_extlinux`, from `boot.loader.generic-extlinux-compatible` |
+| LineageOS | `boot.img` (header v0) | `vendor` FAT: `/android/boot.img` | `fatload` + `bootm` (`CONFIG_ANDROID_BOOT_IMAGE`) |
 | LineageOS recovery | `recovery.img` | eMMC `recovery` | `bootm` from U-Boot, or set `RTC_PDN1` bit 4 and reset, so LK boots it |
 | Fastboot | none | none | `fastboot usb 0` |
+| U-Boot env | `uboot.env` | `vendor` FAT | `ENV_IS_IN_FAT` |
 
-- **[src]** With extlinux, the menu can also list the NixOS generations. That fixes "LK has no menu, so older generations cannot be picked at boot" (`NOTES.md`). `nixos/bootloader.nix` would then stop writing `boot`.
-- **[src]** NixOS from the microSD needs MSDC1 in U-Boot. MSDC1 needs `vmch` (3.3 V) and `vmc` from the PMIC. **[inf]** LK probably does not power the card in normal boot. Then U-Boot needs pwrap (section 2) and a few PMIC regulator writes. Fallback: a NixOS `boot.img` in an eMMC partition, which needs only MSDC0.
-- If `recovery` keeps a real recovery image, LK's own recovery path ("reboot recovery", RTC bit 4) still works without U-Boot. So the recovery entry can be LK's.
+- Everything U-Boot reads is on the eMMC. U-Boot needs only MSDC0, not the microSD and not the PMIC regulators.
+- FAT, not ext4: U-Boot must write the environment (to clear `boot_once`), and its FAT write is safer than its ext4 write.
+- **[src]** With extlinux, the menu can also list the NixOS generations. That fixes "LK has no menu, so older generations cannot be picked at boot" (`NOTES.md`). `nixos/bootloader.nix` would then stop writing `boot`. About 27 MB per generation, so a limit of 8 generations uses about 220 MB.
+- `recovery` keeps a real recovery image, so LK's own recovery path ("reboot recovery", RTC bit 4) still works without U-Boot.
 
 ### 6.5 Fastboot
 
@@ -164,17 +168,16 @@ Goal: U-Boot in `boot`, started by LK in normal boot. It shows a menu with NixOS
 | Keypad driver for `button_kbd` | 0.5 day |
 | `bootmenu` entries, charger-mode bypass, env in a partition, `fw_setenv` config | 1 day |
 | Android `boot.img` boot with `/firmware/android` fixup and `androidboot.*` from LK | 1 day |
-| MSDC1 + PMIC power for the microSD (if LK leaves it off) | 1 to 2 days |
-| NixOS: extlinux on the microSD, new bootloader module | 1 day |
+| NixOS: extlinux on the `vendor` FAT partition, new bootloader module | 1 day |
 
 Total with section 5: about 2 to 3 weeks of part-time work.
 
-### 6.8 Open questions
+### 6.8 Decisions
 
-1. LineageOS `boot.img` place. Today it is in `recovery`. If `recovery` gets a real recovery image, `boot.img` needs a new place: `cache` (208 MiB), `system` (1.5 GiB) or `vendor` (504 MiB) on the eMMC are free if we do not need the old stock LineageOS GSI. Or a partition on the microSD.
-2. Does the LineageOS 24.0 device tree build a `recovery.img`? Header v0 and no A/B mean a separate image is needed.
-3. Is the old LineageOS GSI (eMMC `system`/`vendor`, FDE `userdata`) still needed?
-4. Autoboot default and delay: NixOS after 3 s?
+1. LineageOS `boot.img`: on the `vendor` FAT partition (section 6.4).
+2. The LineageOS 24.0 device tree builds a `recovery.img`. It is not tested yet.
+3. Boot switching from a running OS: U-Boot env with `fw_setenv` (`boot_once`). The in-OS switcher is a later item.
+4. Autoboot: NixOS after 3 s. Hold the side button to stop it.
 
 ### 6.9 Alternatives
 
