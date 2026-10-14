@@ -157,6 +157,12 @@ github.com/LgPWNd/Alcatel_mt6739_5059R_and_5041C_universal_kernel-4.4.95-,
 - `tools/vk-image` (installed as `vk-image load|store`, `WIDTH`, `HEIGHT`): R32UI image, the CPU writes or finds each texel at its twiddled offset.
 - All `vk-triangle` modes pass the readback. `TILE` and `PROBE` fail the built-in centre check by design.
 
+## Pixel centre (done)
+
+- On the GE8100, `pixel` and `centroid` iteration and the `SR_X_P`/`SR_Y_P` registers give the pixel corner, so `gl_FragCoord` was an integer and varyings were half a pixel off. Text and anti-aliased edges in the Android UI broke. `sample` iteration and `SR_X_S`/`SR_Y_S` give the centre; Mesa uses them on cores without `usc_itrsmp_enhanced`.
+- `ISP_CTL.ISP_SAMPLE_POS_MODE` (DX10, OGL) does not fix it: with either value, render jobs write nothing.
+- `tools/vk-raster` (installed as `vk-raster`): checks `gl_FragCoord`, varyings and nearest texture lookups per pixel. MoltenVK passes it as a reference.
+
 ## Open
 
 - Device features copied from the GE8300 and not verified: the vendor uses `max_partitions` 6 and `isp_max_tiles_in_flight` 2 (we have 10 and 4). USC store sizes and TPU and UVS values are unknown; `libusc.so` in `/vendor/lib` may have them.
