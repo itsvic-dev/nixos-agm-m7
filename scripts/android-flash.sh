@@ -25,8 +25,8 @@ bsize=$(stat -c %s boot.img)
 bsum=$(sha256sum boot.img | cut -d' ' -f1)
 
 ssh "$host" "set -e
-[ \"\$(lsblk -no PARTLABEL /dev/mmcblk1p3)\" = super ] || { echo 'mmcblk1p3 is not super'; exit 1; }
-[ \"\$(blockdev --getsize64 /dev/mmcblk1p3)\" -ge $size ] || { echo 'super.img is larger than mmcblk1p3'; exit 1; }
+[ -e /dev/disk/by-partlabel/super ] || { echo 'no super partition'; exit 1; }
+[ \"\$(blockdev --getsize64 /dev/disk/by-partlabel/super)\" -ge $size ] || { echo 'super.img is larger than super'; exit 1; }
 [ \"\$(blockdev --getsize64 /dev/disk/by-partlabel/recovery)\" -ge $bsize ] || { echo 'boot.img is larger than recovery'; exit 1; }
 mkdir -p $stage"
 
@@ -34,7 +34,7 @@ echo "== copy to $host:$stage"
 rsync --info=progress2 super.img boot.img "$host:$stage/"
 
 echo "== write super (data blocks only)"
-ssh "$host" "time simg2img $stage/super.img /dev/mmcblk1p3 && sync && lpdump /dev/mmcblk1p3 | sed -n '/^Partition table/,/^Super partition layout/p'"
+ssh "$host" "time simg2img $stage/super.img /dev/disk/by-partlabel/super && sync && lpdump /dev/disk/by-partlabel/super | sed -n '/^Partition table/,/^Super partition layout/p'"
 
 echo "== write recovery"
 ssh "$host" "dd if=$stage/boot.img of=/dev/disk/by-partlabel/recovery bs=1M conv=fsync status=progress && echo 3 > /proc/sys/vm/drop_caches"
