@@ -32,7 +32,7 @@ mountpoint -q /boot || { echo '/boot is not mounted'; exit 1; }
 mkdir -p $stage"
 
 echo "== copy to $host:$stage"
-rsync --info=progress2 super.img boot.img recovery.img "$host:$stage/"
+rsync --info=progress2 --whole-file --timeout=60 super.img boot.img recovery.img "$host:$stage/"
 
 echo "== write super (data blocks only)"
 ssh "$host" "time simg2img $stage/super.img /dev/disk/by-partlabel/super && sync && lpdump /dev/disk/by-partlabel/super | sed -n '/^Partition table/,/^Super partition layout/p'"
