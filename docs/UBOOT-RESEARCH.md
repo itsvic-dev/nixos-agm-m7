@@ -116,6 +116,7 @@ Goal: U-Boot in `boot`, started by LK in normal boot. It shows a menu with NixOS
 ### 6.2 Input
 
 - **[src]** The phone has a D-pad on the keypad matrix: `KEY_UP` (4,3), `KEY_DOWN` (4,4), `KEY_ENTER` (6,3), plus `KEY_LEFT`, `KEY_RIGHT`, `KEY_BACK` and the digits (`mt6739-agm-m7.dts`). So `bootmenu` can use real arrow keys. No volume-key hacks are needed.
+- The side button is keypad position (0, 1), `KEY_F11` in our keymap. It is a good "hold at power on" key for U-Boot: hold it to stop autoboot and show the menu.
 - **[src]** U-Boot has no MediaTek keypad driver. The keypad state is 5 read-only registers at `0x10010004` (`KPD_MEM1..5`, bits 15:0 of each, a bit is 0 when the key is down). The clock is `clk26m`.
 - **[src]** `drivers/input/button_kbd.c` turns `UCLASS_BUTTON` devices with `linux,code` into a keyboard (stdin), and maps arrows to the escape codes that `bootmenu` reads.
 - Plan **[inf]**: a small `button-mtk-keypad` driver (one child node per key, with row and column), or a `UCLASS_KEYBOARD` driver that polls `KPD_MEM`. About 100 lines either way. LK uses the keypad for its boot mode keys, so the keypad is very likely powered and configured.
