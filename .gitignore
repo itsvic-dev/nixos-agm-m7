@@ -11,3 +11,4 @@
 *.img
 *.o
 /stock/
+/u-boot/
