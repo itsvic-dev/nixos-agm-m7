@@ -118,11 +118,16 @@ Mainline Linux and NixOS on the AGM M7, a rugged keypad phone with a MediaTek MT
 
 </details>
 
+## LineageOS
+
+The LineageOS 24.0 port has its own local manifest: [android_local_manifests_agm_m7](https://github.com/itsvic-dev/android_local_manifests_agm_m7). `./scripts/android-flash.sh` flashes a build.
+
 ## Layout
 
 - `nixos/`: NixOS modules.
 - `pkgs/`: the kernel, `boot.img` parts and `boot.img`.
-- `tools/`: home screen, keyguard and settings (`shell`, Rust), the `t9` input method, the modem NVRAM service and ModemManager plugin, GPU test programs.
+- `tools/`: home screen, keyguard and settings (`shell`, Rust), the `t9` input method, the ModemManager plugin, GPU test programs. The modem NVRAM service is [ccci-fsd](https://github.com/itsvic-dev/ccci-fsd).
+- `android/`: build host patches for LineageOS on an arm64 Linux host.
 - `scripts/`: build, flash, deploy and test helpers.
 - `docs/`: findings and reverse engineering notes.
 
