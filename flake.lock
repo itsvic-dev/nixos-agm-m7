@@ -1,5 +1,21 @@
 {
   "nodes": {
+    "ccci-fsd": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1792051653,
+        "narHash": "sha256-TdlVCqEG1s0beEQ1vBalH3hzrYqwUKyuU1nOqSiFi5g=",
+        "owner": "itsvic-dev",
+        "repo": "ccci-fsd",
+        "rev": "2e3fea9f4376e5c36eee1b495879840b7918e5b4",
+        "type": "github"
+      },
+      "original": {
+        "owner": "itsvic-dev",
+        "repo": "ccci-fsd",
+        "type": "github"
+      }
+    },
     "firmware": {
       "flake": false,
       "locked": {
@@ -51,6 +67,7 @@
     },
     "root": {
       "inputs": {
+        "ccci-fsd": "ccci-fsd",
         "firmware": "firmware",
         "linux": "linux",
         "nixpkgs": "nixpkgs"

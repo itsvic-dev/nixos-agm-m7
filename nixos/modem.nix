@@ -1,7 +1,7 @@
-{ pkgs, ... }:
+{ pkgs, ccci-fsd, ... }:
 
 let
-  ccci-fsd = pkgs.callPackage ../tools/ccci-fsd/package.nix { };
+  ccci-fsd-pkg = pkgs.callPackage "${ccci-fsd}/package.nix" { };
   data = "/var/lib/ccci-fs/data";
 
   # The modem writes its NVRAM at runtime; it works on a copy, never on the phone's partitions.
@@ -52,7 +52,7 @@ in
       StateDirectory = "ccci-fs";
       StateDirectoryMode = "0700";
       ExecStartPre = seed;
-      ExecStart = "${ccci-fsd}/bin/ccci-fsd /dev/ccci_fs ${data}";
+      ExecStart = "${ccci-fsd-pkg}/bin/ccci-fsd /dev/ccci_fs ${data}";
       ExecStartPost = start;
       Restart = "on-failure";
     };

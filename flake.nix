@@ -11,6 +11,10 @@
       url = "github:itsvic-dev/agm-m7-firmware";
       flake = false;
     };
+    ccci-fsd = {
+      url = "github:itsvic-dev/ccci-fsd";
+      flake = false;
+    };
   };
 
   outputs =
@@ -18,6 +22,7 @@
       nixpkgs,
       linux,
       firmware,
+      ccci-fsd,
       ...
     }:
     let
@@ -35,7 +40,7 @@
       };
       agm-m7 = nixpkgs.lib.nixosSystem {
         system = "aarch64-linux";
-        specialArgs = { inherit kernel firmware; };
+        specialArgs = { inherit kernel firmware ccci-fsd; };
         modules = [ ./nixos/configuration.nix ];
       };
     in
@@ -48,7 +53,7 @@
         rootfs = agm-m7.config.system.build.rootfs;
         sd-image = agm-m7.config.system.build.sdImage;
         agm-shell = pkgs.callPackage ./tools/shell/package.nix { };
-        ccci-fsd = pkgs.callPackage ./tools/ccci-fsd/package.nix { };
+        ccci-fsd = pkgs.callPackage "${ccci-fsd}/package.nix" { };
         modemmanager-agm = pkgs.callPackage ./tools/mm-plugin-mtk-ccci/package.nix { };
       };
       checks.aarch64-linux.t9 = pkgs.callPackage ./tools/t9/test/wayland.nix {

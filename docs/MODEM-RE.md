@@ -318,7 +318,7 @@ modem@10014000 {
 - Test settings: the whole smem is cleared before start (also CCB_CTRL and AUDIO), and `MISC_INFO_CCCI` (id 10) is 0 (no sequence check, no status polling).
 - Unrelated: at every boot EMI_MPUS latches a CONN (domain 2) write out of range at 0x40080400 (EMI_MPUS 0x28400012, EMI_MPUT 0x40080400). This is the Wi-Fi CONSYS, not the modem. Clear with EMI+0x160.. = 0xffffffff, EMI+0x200.. = 3, EMI_MPUS = 0x80000000.
 - RPC: the MD asks op 0x4005 for `MD1_SIM1..4_HOT_PLUG_EINT` (types 6, 0, 5) and op 0x400e for `mediatek,md_product_name_model_id`. Answering "not found" as stock (EINT: two params -11; DT query: 0 plus 68 bytes of 0x0f) is enough [P].
-- Then the MD reads and writes its NVRAM through `ccci_fs` (channel 14/15, queue 4). See `CCCI-FS.md`; `tools/ccci-fsd` serves it.
+- Then the MD reads and writes its NVRAM through `ccci_fs` (channel 14/15, queue 4). See `CCCI-FS.md`; [ccci-fsd](https://github.com/itsvic-dev/ccci-fsd) serves it.
 - With CCB (15) and DHL raw (16) offered, the MD asserts 3 s later in `ccci_shm_bm.c:571` (CCB buffer manager). Stock `ccci_mdinit` fills the CCB control area before the MD start. With both features marked not supported, the MD boots: HS2 (control message 0 0 on queue 0) 370 ms after the runtime data [P].
 - After HS2: AT on channel 10/12 (queue 5, `ttyC0`, raw bytes, no user header) answers `ATI` with `MOLY.LR12A.R2.MP.V96.6`. Channel 4 (PCM/audio), 57/59 (IMS DL) and 169/171 (IMSM, WoA) also carry traffic; we ignore them.
 - `AT+CFUN=1` gives SIM READY and 2G registration (the home network, CSQ 24). `+ERAT: 0,0,6,4` = current RAT GSM, mode 2G/3G/4G, LTE preferred.
