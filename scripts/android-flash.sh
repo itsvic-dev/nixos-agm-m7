@@ -1,4 +1,5 @@
-#!/usr/bin/env bash
+#!/usr/bin/env nix-shell
+#!nix-shell -i bash -p coreutils rsync
 # usage: android-flash.sh  (in android-build-arm64: sparse super.img to the microSD super partition, boot.img and recovery.img to /boot/android for U-Boot, recovery.img to recovery)
 set -euo pipefail
 host=${HOST:-root@172.16.42.1}

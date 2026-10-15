@@ -89,8 +89,11 @@ in
     extraGroups = [
       "video"
       "input"
+      "wheel"
     ];
   };
+
+  security.sudo.wheelNeedsPassword = false;
 
   nixpkgs.overlays = [
     (final: prev: {

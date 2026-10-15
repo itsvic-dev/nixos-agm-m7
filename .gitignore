@@ -12,3 +12,4 @@
 *.o
 /stock/
 /u-boot/
+target/
