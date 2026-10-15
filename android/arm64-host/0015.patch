@@ -1,0 +1,56 @@
+From e30a299f2fb41220d3cd47d15e3326bf30c4195d Mon Sep 17 00:00:00 2001
+From: Wiktor Bryk <contact@itsvic.dev>
+Date: Thu, 15 Oct 2026 10:49:29 +0200
+Subject: [PATCH] kernel: use the host tools and libraries on arm64 build hosts
+
+Change-Id: I188a836c127550b5d5def35579aa686b9ad151f8
+---
+ config/BoardConfigKernel.mk | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/config/BoardConfigKernel.mk b/config/BoardConfigKernel.mk
+index ca1a52a..6cef65c 100644
+--- a/config/BoardConfigKernel.mk
++++ b/config/BoardConfigKernel.mk
+@@ -159,8 +159,14 @@ else
+     KERNEL_HOST_C_LD_FLAGS_SYSROOT := --sysroot=$(BUILD_TOP)/prebuilts/gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8/sysroot
+ endif
+ 
++ifeq ($(HOST_PREBUILT_TAG),linux-arm64)
++# kernel-build-tools has x86 libraries only, and clang has no glibc host runtimes; use the host libraries
++KERNEL_MAKE_FLAGS += HOSTCFLAGS="$(KERNEL_HOST_C_LD_FLAGS_SYSROOT)"
++KERNEL_MAKE_FLAGS += HOSTLDFLAGS="$(KERNEL_HOST_C_LD_FLAGS_SYSROOT) -fuse-ld=lld"
++else
+ KERNEL_MAKE_FLAGS += HOSTCFLAGS="$(KERNEL_HOST_C_LD_FLAGS_SYSROOT) -I$(BUILD_TOP)/prebuilts/kernel-build-tools/linux-x86/include"
+ KERNEL_MAKE_FLAGS += HOSTLDFLAGS="$(KERNEL_HOST_C_LD_FLAGS_SYSROOT) -Wl,-rpath,$(BUILD_TOP)/prebuilts/kernel-build-tools/linux-x86/lib64 -L $(BUILD_TOP)/prebuilts/kernel-build-tools/linux-x86/lib64 -fuse-ld=lld --rtlib=compiler-rt"
++endif
+ 
+ TOOLS_PATH_OVERRIDE += PATH=$(BUILD_TOP)/prebuilts/tools-lineage/$(HOST_PREBUILT_TAG)/bin:$(BUILD_TOP)/prebuilts/build-tools/$(HOST_PREBUILT_TAG)/bin:$(TARGET_KERNEL_CLANG_PATH)/bin:$(BUILD_TOP)/prebuilts/rust-toolchain/$(HOST_PREBUILT_TAG)/$(TARGET_KERNEL_RUST_VERSION)/bin:$(BUILD_TOP)/prebuilts/clang-tools/$(HOST_PREBUILT_TAG)/bin:$$PATH
+ 
+@@ -185,7 +191,11 @@ KERNEL_MAKE_CMD := $(BUILD_TOP)/prebuilts/build-tools/$(HOST_PREBUILT_TAG)/bin/m
+ KERNEL_MAKE_FLAGS += LLVM=1 LLVM_IAS=1
+ 
+ # Pass prebuilt LZ4 path
++ifeq ($(HOST_PREBUILT_TAG),linux-arm64)
++KERNEL_MAKE_FLAGS += LZ4=lz4
++else
+ KERNEL_MAKE_FLAGS += LZ4=$(BUILD_TOP)/prebuilts/kernel-build-tools/linux-x86/bin/lz4
++endif
+ 
+ # Since Linux 4.16, flex and bison are required
+ KERNEL_MAKE_FLAGS += LEX=$(BUILD_TOP)/prebuilts/build-tools/$(HOST_PREBUILT_TAG)/bin/flex
+@@ -194,7 +204,11 @@ KERNEL_MAKE_FLAGS += M4=$(BUILD_TOP)/prebuilts/build-tools/$(HOST_PREBUILT_TAG)/
+ TOOLS_PATH_OVERRIDE += BISON_PKGDATADIR=$(BUILD_TOP)/prebuilts/build-tools/common/bison
+ 
+ # Since Linux 5.10, pahole is required
++ifeq ($(HOST_PREBUILT_TAG),linux-arm64)
++KERNEL_MAKE_FLAGS += PAHOLE=pahole
++else
+ KERNEL_MAKE_FLAGS += PAHOLE=$(BUILD_TOP)/prebuilts/kernel-build-tools/linux-x86/bin/pahole
++endif
+ 
+ # Tell rust bindgen which libclang to parse the kernel headers with
+ KERNEL_MAKE_FLAGS += LIBCLANG_PATH=$(TARGET_KERNEL_LIBCLANG_PATH)
+-- 
+2.43.0
+

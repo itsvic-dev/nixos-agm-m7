@@ -4,7 +4,7 @@ Build in the `android-build-arm64` OrbStack VM:
 
 ```
 source /Volumes/Projects/agm-m7-work/android/arm64-host/env.sh
-m bootimage superimage
+m bootimage recoveryimage superimage
 ```
 
 Patches 0001-0014 are from https://actinis.io/blog/building-aosp-on-arm64.
@@ -12,6 +12,10 @@ Patches 0001-0014 are from https://actinis.io/blog/building-aosp-on-arm64.
 the `slices` import hunk, which the tree already has. They are committed on
 the `arm64-host` repo branch in build/make, build/soong, prebuilts/build-tools,
 prebuilts/jdk/jdk21, system/sepolicy and external/lfi/lfi-verifier.
+
+0015 is ours: the kernel build in vendor/lineage uses the host `lz4`, `pahole` and
+libraries, not `prebuilts/kernel-build-tools/linux-x86`. It is on the `arm64-host`
+branch of vendor/lineage. The VM needs `libssl-dev`, `libelf-dev` and `lz4`.
 
 Prebuilts:
 
