@@ -110,7 +110,7 @@ Goal: U-Boot in `boot`, started by LK in normal boot. It shows a menu with NixOS
 ### 6.1 What we get from LK's normal boot
 
 - **[src]** LK loads and starts the modem only in normal boot (see `NOTES.md`). U-Boot runs in normal boot, so every OS that U-Boot starts gets the modem. Today LineageOS boots in recovery mode and has no modem. U-Boot fixes that.
-- Both OSes use our 64-bit mainline kernel with the same `mt6739-agm-m7.dtb`. The LineageOS DTB only adds `/firmware/android` (`scripts/build-android-kernel.sh`). So U-Boot can pass the `x0` DTB (with LK's runtime data) to both kernels. For LineageOS it adds `/firmware/android` with `fdt` commands. **[inf]** No 32-bit kernel and no vendor DTB are involved; this removes the hardest problem.
+- Both OSes use our 64-bit mainline kernel with the same `mt6739-agm-m7.dtb`. The LineageOS DTB only adds `/firmware/android` (`mt6739-agm-m7-android.dts`). So U-Boot can pass the `x0` DTB (with LK's runtime data) to both kernels. For LineageOS it adds `/firmware/android` with `fdt` commands. **[inf]** No 32-bit kernel and no vendor DTB are involved; this removes the hardest problem.
 - LK charger mode also boots `boot`, with `androidboot.mode=charger` in the `x0` `/chosen/bootargs`. U-Boot must see this and boot the default OS at once, without the menu.
 
 ### 6.2 Input
